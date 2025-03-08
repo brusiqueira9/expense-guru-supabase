@@ -14,7 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import logo from "@/assets/logo.svg";
+import logo from "@/assets/money.png";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -104,7 +104,10 @@ export function Sidebar() {
   };
 
   const getUserDisplayName = () => {
-    return user?.user_metadata?.name || user?.email || "Usuário";
+    if (user?.user_metadata?.name) {
+      return user.user_metadata.name;
+    }
+    return user?.email || "Usuário";
   };
 
   return (

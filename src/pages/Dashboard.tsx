@@ -15,8 +15,26 @@ import {
   ClockIcon,
   CalendarClockIcon,
   BarChart3Icon,
+  WalletIcon,
+  ActivityIcon
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { motion } from "framer-motion";
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 export default function Dashboard() {
   const { dashboardSummary: summary, transactions } = useTransactions();
@@ -76,12 +94,30 @@ export default function Dashboard() {
 
   // Calcular próximas despesas pendentes
   const upcomingExpenses = transactions
-    .filter(t => t.type === 'expense' && t.paymentStatus !== 'paid' && t.dueDate)
-    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
+    .filter(t => 
+      t.type === 'expense' && 
+      (t.paymentStatus === 'pending' || t.paymentStatus === 'scheduled')
+    )
+    .sort((a, b) => {
+      // Se ambos têm data de vencimento, ordenar por data
+      if (a.dueDate && b.dueDate) {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+      // Se apenas um tem data de vencimento, priorizar o que tem data
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      // Se nenhum tem data, ordenar por valor (maior primeiro)
+      return b.amount - a.amount;
+    })
     .slice(0, 3);
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
@@ -89,282 +125,268 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Resumo Financeiro */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Saldo Total
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(summary.balance)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Diferença entre receitas e despesas
-            </p>
-          </CardContent>
-        </Card>
+      {/* Cards Principais */}
+      <motion.div 
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        variants={container}
+      >
+        <motion.div variants={item}>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Saldo Total
+              </CardTitle>
+              <WalletIcon className={`h-4 w-4 ${summary.balance >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${summary.balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {formatCurrency(summary.balance)}
+              </div>
+              <div className="flex items-center gap-2">
+                <ActivityIcon className="h-4 w-4 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  Balanço atual
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total de Receitas
-            </CardTitle>
-            <ArrowUpIcon className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">
-              {formatCurrency(summary.totalIncome)}
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">
-                {incomeVariation >= 0 ? (
-                  <span className="text-green-500 flex items-center gap-1">
-                    <TrendingUpIcon className="h-3 w-3" />
-                    +{incomeVariation.toFixed(1)}%
-                  </span>
-                ) : (
-                  <span className="text-red-500 flex items-center gap-1">
-                    <TrendingDownIcon className="h-3 w-3" />
-                    {incomeVariation.toFixed(1)}%
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-muted-foreground">vs. mês anterior</p>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div variants={item}>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total de Receitas
+              </CardTitle>
+              <ArrowUpIcon className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-500">
+                {formatCurrency(summary.totalIncome)}
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {incomeVariation >= 0 ? (
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingUpIcon className="h-3 w-3" />
+                      +{incomeVariation.toFixed(1)}%
+                    </span>
+                  ) : (
+                    <span className="text-red-500 flex items-center gap-1">
+                      <TrendingDownIcon className="h-3 w-3" />
+                      {incomeVariation.toFixed(1)}%
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">vs. mês anterior</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total de Despesas
-            </CardTitle>
-            <ArrowDownIcon className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(summary.totalExpense)}
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">
-                {expenseVariation <= 0 ? (
-                  <span className="text-green-500 flex items-center gap-1">
-                    <TrendingDownIcon className="h-3 w-3" />
-                    {Math.abs(expenseVariation).toFixed(1)}%
-                  </span>
-                ) : (
-                  <span className="text-red-500 flex items-center gap-1">
-                    <TrendingUpIcon className="h-3 w-3" />
-                    +{expenseVariation.toFixed(1)}%
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-muted-foreground">vs. mês anterior</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div variants={item}>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total de Despesas
+              </CardTitle>
+              <ArrowDownIcon className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-500">
+                {formatCurrency(summary.totalExpense)}
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {expenseVariation <= 0 ? (
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingDownIcon className="h-3 w-3" />
+                      {Math.abs(expenseVariation).toFixed(1)}%
+                    </span>
+                  ) : (
+                    <span className="text-red-500 flex items-center gap-1">
+                      <TrendingUpIcon className="h-3 w-3" />
+                      +{expenseVariation.toFixed(1)}%
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">vs. mês anterior</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-      {/* Status das Despesas */}
+        <motion.div variants={item}>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Taxa de Pagamento
+              </CardTitle>
+              <BarChart3Icon className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-500">
+                {totalExpenses ? (paidPercentage).toFixed(1) : 0}%
+              </div>
+              <Progress value={paidPercentage} className="h-2">
+                <div 
+                  className="h-full bg-blue-500 transition-all" 
+                  style={{ width: `${paidPercentage}%` }} 
+                />
+              </Progress>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      {/* Status das Despesas e Próximas Despesas */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Status das Despesas</CardTitle>
-            <CardDescription>Distribuição do status de pagamento</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircleIcon className="h-4 w-4 text-green-500" />
-                  <span>Pagas</span>
+        <motion.div variants={item}>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Status das Despesas</CardTitle>
+              <CardDescription>Distribuição do status de pagamento</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                    <span>Pagas</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(summary.totalPaidExpense)}</span>
                 </div>
-                <span className="font-medium">{formatCurrency(summary.totalPaidExpense)}</span>
+                <Progress value={paidPercentage} className="h-2">
+                  <div 
+                    className="h-full bg-green-500 transition-all" 
+                    style={{ width: `${paidPercentage}%` }} 
+                  />
+                </Progress>
               </div>
-              <Progress value={paidPercentage} className="bg-green-100 dark:bg-green-900">
-                <div className="bg-green-500 h-full transition-all" style={{ width: `${paidPercentage}%` }} />
-              </Progress>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <AlertCircleIcon className="h-4 w-4 text-yellow-500" />
-                  <span>Pendentes</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertCircleIcon className="h-4 w-4 text-yellow-500" />
+                    <span>Pendentes</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(summary.totalPendingExpense)}</span>
                 </div>
-                <span className="font-medium">{formatCurrency(summary.totalPendingExpense)}</span>
+                <Progress value={pendingPercentage} className="h-2">
+                  <div 
+                    className="h-full bg-yellow-500 transition-all" 
+                    style={{ width: `${pendingPercentage}%` }} 
+                  />
+                </Progress>
               </div>
-              <Progress value={pendingPercentage} className="bg-yellow-100 dark:bg-yellow-900">
-                <div className="bg-yellow-500 h-full transition-all" style={{ width: `${pendingPercentage}%` }} />
-              </Progress>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Próximas Despesas</CardTitle>
-            <CardDescription>Despesas pendentes ou agendadas</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {upcomingExpenses.length > 0 ? (
-                upcomingExpenses.map(expense => (
-                  <div key={expense.id} className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{expense.description || expense.category}</p>
+        <motion.div variants={item}>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Próximas Despesas</CardTitle>
+              <CardDescription>Despesas pendentes ou agendadas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {upcomingExpenses.length > 0 ? (
+                  upcomingExpenses.map(expense => (
+                    <div key={expense.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{expense.description || expense.category}</p>
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground">
+                            Vence em {new Date(expense.dueDate! + 'T00:00:00').toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
                       <div className="flex items-center gap-2">
-                        <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">
-                          Vence em {new Date(expense.dueDate!).toLocaleDateString('pt-BR')}
-                        </p>
+                        <span className="text-sm font-medium text-red-500">
+                          {formatCurrency(expense.amount)}
+                        </span>
+                        {expense.paymentStatus === 'pending' ? (
+                          <ClockIcon className="h-4 w-4 text-yellow-500" />
+                        ) : (
+                          <CalendarClockIcon className="h-4 w-4 text-blue-500" />
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-red-500">
-                        {formatCurrency(expense.amount)}
-                      </span>
-                      {expense.paymentStatus === 'pending' ? (
-                        <ClockIcon className="h-4 w-4 text-yellow-500" />
-                      ) : (
-                        <CalendarClockIcon className="h-4 w-4 text-blue-500" />
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma despesa pendente
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhuma despesa pendente
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Maiores Transações */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Maiores Despesas do Mês</CardTitle>
-            <CardDescription>Top 3 despesas do mês atual</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topExpenses.length > 0 ? (
-                topExpenses.map(expense => (
-                  <div key={expense.id} className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{expense.description || expense.category}</p>
-                      <p className="text-xs text-muted-foreground">{expense.category}</p>
+        <motion.div variants={item}>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Maiores Despesas do Mês</CardTitle>
+              <CardDescription>Top 3 despesas do mês atual</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {topExpenses.length > 0 ? (
+                  topExpenses.map(expense => (
+                    <div key={expense.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{expense.description || expense.category}</p>
+                        <p className="text-xs text-muted-foreground">{expense.category}</p>
+                      </div>
+                      <span className="text-sm font-medium text-red-500">
+                        {formatCurrency(expense.amount)}
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-red-500">
-                      {formatCurrency(expense.amount)}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma despesa no mês atual
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhuma despesa no mês atual
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Maiores Receitas do Mês</CardTitle>
-            <CardDescription>Top 3 receitas do mês atual</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topIncomes.length > 0 ? (
-                topIncomes.map(income => (
-                  <div key={income.id} className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{income.description || income.category}</p>
-                      <p className="text-xs text-muted-foreground">{income.category}</p>
+        <motion.div variants={item}>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Maiores Receitas do Mês</CardTitle>
+              <CardDescription>Top 3 receitas do mês atual</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {topIncomes.length > 0 ? (
+                  topIncomes.map(income => (
+                    <div key={income.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{income.description || income.category}</p>
+                        <p className="text-xs text-muted-foreground">{income.category}</p>
+                      </div>
+                      <span className="text-sm font-medium text-green-500">
+                        {formatCurrency(income.amount)}
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-green-500">
-                      {formatCurrency(income.amount)}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma receita no mês atual
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhuma receita no mês atual
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
-
-      {/* Indicadores Mensais */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Receitas do Mês
-            </CardTitle>
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">
-              {formatCurrency(currentMonthIncome)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Despesas do Mês
-            </CardTitle>
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(currentMonthExpense)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Saldo do Mês
-            </CardTitle>
-            <PiggyBankIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(currentMonthIncome - currentMonthExpense)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Taxa de Pagamento
-            </CardTitle>
-            <BarChart3Icon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-500">
-              {totalExpenses ? (paidPercentage).toFixed(1) : 0}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              das despesas pagas
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </motion.div>
   );
 } 

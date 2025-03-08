@@ -92,6 +92,8 @@ export function TransactionList() {
       category: editForm.category,
       date: editForm.date,
       description: editForm.description,
+      dueDate: editForm.type === 'expense' ? editForm.dueDate : undefined,
+      paymentStatus: editForm.type === 'expense' ? editForm.paymentStatus : undefined,
     });
 
     setEditingId(null);
@@ -320,10 +322,10 @@ export function TransactionList() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="h-4 w-1 bg-income rounded-full" />
-                        <h3 className="text-lg font-medium text-income">Receitas</h3>
+                        <div className="h-4 w-1 bg-green-500 rounded-full" />
+                        <h3 className="text-lg font-medium text-green-500">Receitas</h3>
                       </div>
-                      <Badge variant="secondary" className="text-income">
+                      <Badge variant="secondary" className="text-green-500">
                         {incomeTransactions.length} transação(ões)
                       </Badge>
                     </div>
@@ -349,11 +351,11 @@ export function TransactionList() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="h-4 w-1 bg-expense rounded-full" />
-                        <h3 className="text-lg font-medium text-expense">Despesas</h3>
+                        <div className="h-4 w-1 bg-red-500 rounded-full" />
+                        <h3 className="text-lg font-medium text-red-500">Despesas</h3>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-expense">
+                        <Badge variant="secondary" className="text-red-500">
                           {expenseTransactions.length} transação(ões)
                         </Badge>
                         {filters.paymentStatus && filters.paymentStatus !== 'all' && (
@@ -424,7 +426,7 @@ function TransactionCard({
       className={cn(
         "overflow-hidden transition-all duration-300", 
         "hover:shadow-md",
-        "animate-in",
+        "animate-in"
       )}
       style={{ "--index": index } as React.CSSProperties}
     >
@@ -433,7 +435,7 @@ function TransactionCard({
           <div 
             className={cn(
               "w-2",
-              transaction.type === "income" ? "bg-income" : "bg-expense"
+              transaction.type === "income" ? "bg-green-500" : "bg-red-500"
             )}
           />
           <div className="flex flex-1 items-center justify-between p-4">
@@ -472,12 +474,38 @@ function TransactionCard({
                     onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
                     className="flex-1"
                   />
+                  {editForm.type === 'expense' && (
+                    <Input
+                      type="date"
+                      value={editForm.dueDate || ""}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                      className="flex-1"
+                      placeholder="Data de Vencimento"
+                    />
+                  )}
+                </div>
+                <div className="flex gap-2">
                   <Input
                     value={editForm.description || ""}
                     onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
                     className="flex-1"
                     placeholder="Descrição"
                   />
+                  {editForm.type === 'expense' && (
+                    <Select
+                      value={editForm.paymentStatus}
+                      onValueChange={(value) => setEditForm(prev => ({ ...prev, paymentStatus: value as PaymentStatus }))}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="paid">Pago</SelectItem>
+                        <SelectItem value="scheduled">Agendado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button
@@ -502,15 +530,21 @@ function TransactionCard({
               <>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                   {transaction.type === "income" ? (
-                    <ArrowUpCircle className="h-5 w-5 text-income shrink-0" />
+                    <ArrowUpCircle className="h-5 w-5 text-green-500 shrink-0" />
                   ) : (
-                    <ArrowDownCircle className="h-5 w-5 text-expense shrink-0" />
+                    <ArrowDownCircle className="h-5 w-5 text-red-500 shrink-0" />
                   )}
-                  <div className="font-medium">
+                  <div className={cn(
+                    "font-medium",
+                    "text-foreground"
+                  )}>
                     {transaction.description || (transaction.type === "income" ? "Receita" : "Despesa")}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="w-fit">
+                    <Badge variant="outline" className={cn(
+                      "w-fit",
+                      transaction.type === "income" ? "text-green-500" : "text-red-500"
+                    )}>
                       {transaction.category}
                     </Badge>
                     {isExpense && (
@@ -520,78 +554,75 @@ function TransactionCard({
                 </div>
                 
                 <div className="flex items-center gap-4">
-                  <div 
-                    className={cn(
-                      "font-semibold",
-                      transaction.type === "income" ? "text-income" : "text-expense"
-                    )}
-                  >
-                    {transaction.type === "expense" ? "- " : "+ "}
+                  <div className={cn(
+                    "text-lg font-bold",
+                    transaction.type === "income" ? "text-green-500" : "text-red-500"
+                  )}>
                     {formatCurrency(transaction.amount)}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {formatDate(transaction.date)}
                   </div>
-                  <div className="flex gap-1">
-                    {isExpense && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full text-muted-foreground hover:text-primary"
-                          >
-                            {transaction.paymentStatus === 'paid' ? (
-                              <Check className="h-4 w-4" />
-                            ) : transaction.paymentStatus === 'scheduled' ? (
-                              <CalendarClock className="h-4 w-4" />
-                            ) : (
-                              <Clock className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleStatusChange('paid')}
-                            className="gap-2"
-                          >
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Marcar como pago</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleStatusChange('pending')}
-                            className="gap-2"
-                          >
-                            <Clock className="h-4 w-4 text-yellow-500" />
-                            <span>Marcar como pendente</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleStatusChange('scheduled')}
-                            className="gap-2"
-                          >
-                            <CalendarClock className="h-4 w-4 text-blue-500" />
-                            <span>Marcar como agendado</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full text-muted-foreground hover:text-primary"
-                      onClick={() => onEdit(transaction)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full text-muted-foreground hover:text-destructive"
-                      onClick={() => onDelete(transaction.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                </div>
+                <div className="flex gap-1">
+                  {isExpense && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full text-muted-foreground hover:text-primary"
+                        >
+                          {transaction.paymentStatus === 'paid' ? (
+                            <Check className="h-4 w-4" />
+                          ) : transaction.paymentStatus === 'scheduled' ? (
+                            <CalendarClock className="h-4 w-4" />
+                          ) : (
+                            <Clock className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleStatusChange('paid')}
+                          className="gap-2"
+                        >
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>Marcar como pago</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleStatusChange('pending')}
+                          className="gap-2"
+                        >
+                          <Clock className="h-4 w-4 text-yellow-500" />
+                          <span>Marcar como pendente</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleStatusChange('scheduled')}
+                          className="gap-2"
+                        >
+                          <CalendarClock className="h-4 w-4 text-blue-500" />
+                          <span>Marcar como agendado</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full text-muted-foreground hover:text-primary"
+                    onClick={() => onEdit(transaction)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full text-muted-foreground hover:text-destructive"
+                    onClick={() => onDelete(transaction.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </>
             )}

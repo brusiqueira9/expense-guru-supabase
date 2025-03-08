@@ -1,69 +1,141 @@
-# Welcome to your Lovable project
+# Expense Guru - Controle Financeiro
 
-## Project info
+Um aplicativo moderno e intuitivo para gerenciamento de finanças pessoais, construído com React, TypeScript, Tailwind CSS e Supabase.
 
-**URL**: https://lovable.dev/projects/dc4dbaed-707b-4895-8635-e79539b525f1
+## 🚀 Funcionalidades
 
-## How can I edit this code?
+- **Autenticação Segura**
+  - Login com email/senha
+  - Registro de novos usuários
+  - Recuperação de senha
+  - Perfil de usuário personalizável
 
-There are several ways of editing your application.
+- **Gestão de Transações**
+  - Registro de receitas e despesas
+  - Categorização de transações
+  - Status de pagamento (pago, pendente, agendado)
+  - Filtros avançados
+  - Ordenação por data e tipo
 
-**Use Lovable**
+- **Análise Financeira**
+  - Dashboard com visão geral
+  - Gráficos interativos
+  - Relatórios detalhados
+  - Acompanhamento de metas
+  - Balanço de receitas e despesas
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/dc4dbaed-707b-4895-8635-e79539b525f1) and start prompting.
+- **Organização**
+  - Gerenciamento de categorias
+  - Controle de contas bancárias
+  - Gestão de carteiras de investimento
+  - Sistema de metas financeiras
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Tecnologias
 
-**Use your preferred IDE**
+- **Frontend**
+  - React
+  - TypeScript
+  - Tailwind CSS
+  - Shadcn/ui
+  - Lucide Icons
+  - React Router DOM
+  - Framer Motion
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Backend/Banco de Dados**
+  - Supabase (Autenticação e Armazenamento)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 📦 Instalação
 
-Follow these steps:
+1. Clone o repositório:
+```bash
+git clone [url-do-repositorio]
+cd expense-guru
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+2. Instale as dependências:
+```bash
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+3. Configure as variáveis de ambiente:
+Crie um arquivo `.env` na raiz do projeto:
+```env
+VITE_SUPABASE_URL=sua_url_do_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+4. Inicie o servidor de desenvolvimento:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 📁 Estrutura do Projeto
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── assets/           # Recursos estáticos (imagens, etc)
+├── components/       # Componentes React reutilizáveis
+│   ├── layout/      # Componentes de layout (Sidebar, etc)
+│   └── ui/          # Componentes de UI (botões, inputs, etc)
+├── context/         # Contextos React (TransactionContext, etc)
+├── hooks/           # Hooks personalizados
+├── lib/            # Utilitários e configurações
+├── pages/          # Componentes de página
+└── types/          # Definições de tipos TypeScript
+```
 
-**Use GitHub Codespaces**
+## 🗺️ Mapa de Navegação
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- **/** - Dashboard (visão geral)
+- **/auth** - Página de login
+- **/register** - Página de registro
+- **/transactions** - Gerenciamento de transações
+- **/categories** - Gerenciamento de categorias
+- **/accounts** - Gerenciamento de contas
+- **/wallets** - Gerenciamento de carteiras
+- **/charts** - Visualização de gráficos
+- **/reports** - Geração de relatórios
+- **/goals** - Definição e acompanhamento de metas
+- **/settings** - Configurações do usuário
 
-## What technologies are used for this project?
+## 🔒 Segurança
 
-This project is built with .
+- Autenticação gerenciada pelo Supabase
+- Dados armazenados de forma segura
+- Proteção de rotas para usuários autenticados
+- Isolamento de dados por usuário
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🎨 Design
 
-## How can I deploy this project?
+- Interface moderna e minimalista
+- Tema claro/escuro
+- Design responsivo
+- Animações suaves
+- Feedback visual para ações do usuário
 
-Simply open [Lovable](https://lovable.dev/projects/dc4dbaed-707b-4895-8635-e79539b525f1) and click on Share -> Publish.
+## 📱 Responsividade
 
-## I want to use a custom domain - is that possible?
+O aplicativo é totalmente responsivo e se adapta a diferentes tamanhos de tela:
+- Desktop (> 1024px)
+- Tablet (768px - 1024px)
+- Mobile (< 768px)
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## 🤝 Contribuição
+
+1. Faça um Fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+## 👥 Autores
+
+- Bruno Siqueira - Desenvolvedor Principal
+
+## 📞 Suporte
+
+Para suporte, envie um email para contato@brunosiqueira.tec.br

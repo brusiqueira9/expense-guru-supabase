@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,9 +9,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface Category {
   id: string;
@@ -25,6 +37,7 @@ export default function Categories() {
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newCategory, setNewCategory] = useState<{
     name: string;
     description: string;
@@ -84,6 +97,48 @@ export default function Categories() {
     }
   }
 
+  async function handleUpdateCategory(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      if (!editingCategory) return;
+
+      const { error } = await supabase
+        .from('categories')
+        .update({
+          name: editingCategory.name,
+          description: editingCategory.description,
+          type: editingCategory.type
+        })
+        .eq('id', editingCategory.id);
+
+      if (error) throw error;
+      
+      toast.success('Categoria atualizada com sucesso');
+      fetchCategories();
+      setEditingCategory(null);
+    } catch (error: any) {
+      console.error('Erro ao atualizar categoria:', error);
+      toast.error('Erro ao atualizar categoria: ' + error.message);
+    }
+  }
+
+  async function handleDeleteCategory(id: string) {
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast.success('Categoria excluída com sucesso');
+      fetchCategories();
+    } catch (error: any) {
+      console.error('Erro ao excluir categoria:', error);
+      toast.error('Erro ao excluir categoria: ' + error.message);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -140,6 +195,51 @@ export default function Categories() {
         </Dialog>
       </div>
 
+      <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Categoria</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateCategory} className="space-y-4">
+            <div className="space-y-2">
+              <Input
+                placeholder="Nome da categoria"
+                value={editingCategory?.name || ''}
+                onChange={(e) => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Input
+                placeholder="Descrição"
+                value={editingCategory?.description || ''}
+                onChange={(e) => setEditingCategory(prev => prev ? { ...prev, description: e.target.value } : null)}
+              />
+            </div>
+            <div className="space-y-2">
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                value={editingCategory?.type || 'expense'}
+                onChange={(e) => setEditingCategory(prev => prev ? { ...prev, type: e.target.value as 'income' | 'expense' } : null)}
+                required
+                aria-label="Tipo de categoria"
+              >
+                <option value="expense">Despesa</option>
+                <option value="income">Receita</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditingCategory(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                Salvar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {loading ? (
           <p>Carregando categorias...</p>
@@ -147,9 +247,50 @@ export default function Categories() {
           categories.map((category) => (
             <div
               key={category.id}
-              className="p-6 bg-card rounded-lg shadow border"
+              className="p-6 bg-card rounded-lg shadow border group relative"
             >
-              <h3 className="text-lg font-semibold">{category.name}</h3>
+              <div className="absolute right-4 top-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditingCategory(category)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir Categoria</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir a categoria "{category.name}"? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteCategory(category.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+              <h3 className={cn(
+                "text-lg font-semibold",
+                category.type === 'income' ? 'text-green-500' : 'text-red-500'
+              )}>{category.name}</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {category.description}
               </p>

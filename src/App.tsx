@@ -15,6 +15,7 @@ import { Auth } from "./components/Auth";
 import { useAuth } from "./hooks/useAuth";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { Register } from "./pages/Register";
 
 // Install jsPDF and jspdf-autotable
 // <lov-add-dependency>jspdf@latest</lov-add-dependency>
@@ -60,6 +61,7 @@ function App() {
           <TransactionProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/register" element={<Register />} />
               <Route
                 path="/"
                 element={

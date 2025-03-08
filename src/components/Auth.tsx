@@ -3,16 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { WavePattern, SparklesCore } from './ui/icons';
-import { Loader2 } from 'lucide-react';
-import logo from '@/assets/logo.svg';
+import { Card } from './ui/card';
+import { Eye, EyeOff, ArrowRight, Lock, Mail, Loader2 } from 'lucide-react';
+import Logo from './Logo';
+import { motion } from 'framer-motion';
+import BackgroundAnimation from './BackgroundAnimation';
 
 export function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signIn, session } = useAuth();
 
@@ -28,20 +30,8 @@ export function Auth() {
 
     try {
       setLoading(true);
-      setMessage(null);
-
       await signIn(email, password);
-
-      setMessage({
-        text: 'Login realizado com sucesso!',
-        type: 'success'
-      });
-      
     } catch (error: any) {
-      setMessage({
-        text: error.message,
-        type: 'error'
-      });
       console.error('Erro no login:', error);
     } finally {
       setLoading(false);
@@ -49,97 +39,102 @@ export function Auth() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
-      {/* Padrões de fundo */}
-      <div className="absolute inset-0 w-full h-full">
-        <WavePattern />
-        <SparklesCore />
-      </div>
-
-      {/* Container principal */}
-      <div className="relative w-full max-w-md px-4">
-        <Card className="w-full backdrop-blur-sm bg-card/95 shadow-2xl">
-          <CardHeader className="space-y-4 pb-8">
-            <div className="flex justify-center">
-              <div className="relative">
-                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary to-primary/60 blur" />
-                <div className="relative bg-card rounded-full p-2">
-                  <img src={logo} alt="Expense Guru Logo" className="h-12 w-12" />
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2 text-center">
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Expense Guru
-              </CardTitle>
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden">
+      <BackgroundAnimation />
+      
+      <div className="relative w-full max-w-md animate-float z-10">
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 z-20 animate-pulse-slow">
+          <Logo />
+        </div>
+        
+        <Card className="neomorphic p-8 pt-16">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-semibold tracking-wide mb-2 transition-all duration-300 hover:tracking-wider">
+                Bem-vindo de volta
+              </h1>
               <p className="text-sm text-muted-foreground">
-                Entre com suas credenciais para acessar
+                Entre com sua conta para continuar
               </p>
             </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  required
-                  className="bg-background/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  required
-                  className="bg-background/50"
-                />
-              </div>
-
-              {message && (
-                <div 
-                  className={`p-3 rounded-lg text-sm ${
-                    message.type === 'error' 
-                      ? 'bg-destructive/10 text-destructive' 
-                      : 'bg-primary/10 text-primary'
-                  }`}
-                >
-                  {message.text}
+            
+            <div className="space-y-6">
+              <div className={`space-y-2 relative transition-all duration-300 ${isInputFocused === 'email' ? 'scale-105' : ''}`}>
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Mail className="h-4 w-4" />
+                  Email
                 </div>
-              )}
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="animate-text-focus pl-3 pr-3 backdrop-blur-sm bg-transparent border-gray-400 focus:border-black transition-all duration-300"
+                    required
+                    onFocus={() => setIsInputFocused('email')}
+                    onBlur={() => setIsInputFocused(null)}
+                  />
+                  <div className={`absolute bottom-0 left-0 h-0.5 bg-black transition-all duration-300 ease-in-out ${isInputFocused === 'email' ? 'w-full' : 'w-0'}`}></div>
+                </div>
+              </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-                size="lg"
+              <div className={`space-y-2 relative transition-all duration-300 ${isInputFocused === 'password' ? 'scale-105' : ''}`}>
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Lock className="h-4 w-4" />
+                  Senha
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Sua senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="animate-text-focus pl-3 pr-10 backdrop-blur-sm bg-transparent border-gray-400 focus:border-black transition-all duration-300"
+                    required
+                    onFocus={() => setIsInputFocused('password')}
+                    onBlur={() => setIsInputFocused(null)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black/60 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                  <div className={`absolute bottom-0 left-0 h-0.5 bg-black transition-all duration-300 ease-in-out ${isInputFocused === 'password' ? 'w-full' : 'w-0'}`}></div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-black text-white hover:bg-gray-800 transition-all duration-300 group relative overflow-hidden"
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {loading ? 'Processando...' : 'Entrar'}
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </span>
+              <span className="absolute inset-0 bg-gray-800 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+            </Button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="text-sm text-gray-600 hover:text-black transition-colors hover:underline"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Entrando...
-                  </>
-                ) : (
-                  'Entrar'
-                )}
-              </Button>
-
-              <p className="text-center text-sm text-muted-foreground">
-                Não tem uma conta?{' '}
-                <a href="#" className="text-primary hover:underline">
-                  Cadastre-se
-                </a>
-              </p>
-            </form>
-          </CardContent>
+                Não tem uma conta? Criar agora
+              </button>
+            </div>
+          </form>
         </Card>
       </div>
     </div>

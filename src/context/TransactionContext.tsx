@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Transaction, TransactionType, TransactionCategory, FinancialSummary, TransactionFilters, PaymentStatus } from "@/types";
-import { loadTransactions, saveTransactions } from "@/lib/storage";
+import { loadTransactions, saveTransactions, clearTransactions, migrateOldData } from "@/lib/storage";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TransactionContextType {
   transactions: Transaction[];
@@ -64,11 +65,53 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     totalPaidExpense: 0,
   });
 
-  // Load transactions from localStorage on initial render
+  const { user } = useAuth();
+
+  // Load transactions from localStorage on initial render or when user changes
   useEffect(() => {
-    const loadedTransactions = loadTransactions();
-    setTransactions(loadedTransactions);
-  }, []);
+    if (user?.id && user?.email) {
+      // Carrega as transações (tentará restaurar dados perdidos primeiro)
+      const loadedTransactions = loadTransactions(user.id, user.email);
+      
+      if (loadedTransactions.length > 0) {
+        toast.success("Dados carregados com sucesso!");
+      }
+      
+      setTransactions(loadedTransactions);
+    } else {
+      setTransactions([]);
+    }
+  }, [user?.id, user?.email]);
+
+  // Save transactions to localStorage whenever they change
+  useEffect(() => {
+    if (user?.id) {
+      saveTransactions(user.id, transactions);
+    }
+  }, [transactions, user?.id]);
+
+  // Clear transactions when user logs out
+  useEffect(() => {
+    if (!user?.id) {
+      setTransactions([]);
+      setFilters({});
+      setFilteredTransactions([]);
+      setSummary({
+        totalIncome: 0,
+        totalExpense: 0,
+        balance: 0,
+        totalPendingExpense: 0,
+        totalPaidExpense: 0,
+      });
+      setDashboardSummary({
+        totalIncome: 0,
+        totalExpense: 0,
+        balance: 0,
+        totalPendingExpense: 0,
+        totalPaidExpense: 0,
+      });
+    }
+  }, [user?.id]);
 
   // Calculate dashboard summary (always uses all transactions)
   useEffect(() => {
@@ -121,11 +164,6 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     setFilteredTransactions(filtered);
     setSummary(calculateSummary(filtered));
   }, [transactions, filters]);
-
-  // Save transactions to localStorage whenever they change
-  useEffect(() => {
-    saveTransactions(transactions);
-  }, [transactions]);
 
   const addTransaction = (transaction: Omit<Transaction, "id">) => {
     const newTransaction = {
