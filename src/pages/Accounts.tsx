@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/formatters';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,7 +37,10 @@ export default function Accounts() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newAccount, setNewAccount] = useState({
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
     name: '',
     type: 'checking',
     balance: 0,
@@ -56,31 +70,88 @@ export default function Accounts() {
     }
   }
 
-  async function handleCreateAccount(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setLoading(true);
+    
     try {
       if (!user?.id) {
         toast.error('Usuário não autenticado');
         return;
       }
 
+      if (isEditing && selectedAccount) {
+        const { error } = await supabase
+          .from('accounts')
+          .update({
+            name: formData.name,
+            type: formData.type,
+            balance: formData.balance,
+          })
+          .eq('id', selectedAccount.id);
+
+        if (error) throw error;
+        toast.success('Conta atualizada com sucesso');
+      } else {
+        const { error } = await supabase
+          .from('accounts')
+          .insert([{
+            ...formData,
+            user_id: user.id
+          }]);
+
+        if (error) throw error;
+        toast.success('Conta criada com sucesso');
+      }
+      
+      fetchAccounts();
+      handleCloseDialog();
+    } catch (error: any) {
+      console.error('Erro ao salvar conta:', error);
+      toast.error('Erro ao salvar conta: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDeleteAccount(id: string) {
+    try {
       const { error } = await supabase
         .from('accounts')
-        .insert([{
-          ...newAccount,
-          user_id: user.id
-        }]);
+        .delete()
+        .eq('id', id);
 
       if (error) throw error;
       
-      toast.success('Conta criada com sucesso');
+      toast.success('Conta excluída com sucesso');
       fetchAccounts();
-      setNewAccount({ name: '', type: 'checking', balance: 0 });
     } catch (error: any) {
-      console.error('Erro ao criar conta:', error);
-      toast.error('Erro ao criar conta: ' + error.message);
+      console.error('Erro ao excluir conta:', error);
+      toast.error('Erro ao excluir conta: ' + error.message);
     }
   }
+
+  const handleEditAccount = (account: Account) => {
+    setIsEditing(true);
+    setSelectedAccount(account);
+    setFormData({
+      name: account.name,
+      type: account.type,
+      balance: account.balance,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsEditing(false);
+    setSelectedAccount(null);
+    setDialogOpen(false);
+    setFormData({
+      name: '',
+      type: 'checking',
+      balance: 0,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -91,31 +162,34 @@ export default function Accounts() {
             Gerencie suas contas bancárias
           </p>
         </div>
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => {
+              setIsEditing(false);
+              setDialogOpen(true);
+            }}>
               <Plus className="mr-2 h-4 w-4" />
               Nova Conta
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nova Conta</DialogTitle>
+              <DialogTitle>{isEditing ? 'Editar Conta' : 'Nova Conta'}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreateAccount} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Input
                   placeholder="Nome da conta"
-                  value={newAccount.name}
-                  onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <select
                   className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  value={newAccount.type}
-                  onChange={(e) => setNewAccount({ ...newAccount, type: e.target.value })}
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   required
                   aria-label="Tipo de conta"
                 >
@@ -129,14 +203,19 @@ export default function Accounts() {
                 <Input
                   type="number"
                   placeholder="Saldo inicial"
-                  value={newAccount.balance}
-                  onChange={(e) => setNewAccount({ ...newAccount, balance: parseFloat(e.target.value) })}
+                  value={formData.balance}
+                  onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) })}
                   required
                 />
               </div>
-              <Button type="submit">
-                Criar Conta
-              </Button>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Salvando..." : isEditing ? "Salvar" : "Criar"}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
@@ -151,7 +230,45 @@ export default function Accounts() {
               key={account.id}
               className="p-6 bg-card rounded-lg shadow border"
             >
-              <h3 className="text-lg font-semibold">{account.name}</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">{account.name}</h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEditAccount(account)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir Conta</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir a conta "{account.name}"? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteAccount(account.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
               <p className="text-sm text-muted-foreground mt-1">
                 {account.type === 'checking' && 'Conta Corrente'}
                 {account.type === 'savings' && 'Conta Poupança'}

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { clearTransactions } from '@/lib/storage';
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
@@ -63,9 +62,6 @@ export function useAuth() {
   const signOut = async () => {
     try {
       setError(null);
-      if (user?.id) {
-        clearTransactions(user.id);
-      }
       const { error: signOutError } = await supabase.auth.signOut();
       if (signOutError) throw signOutError;
     } catch (err: any) {
