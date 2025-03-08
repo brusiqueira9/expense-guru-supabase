@@ -1,5 +1,7 @@
 export type TransactionType = 'income' | 'expense';
 
+export type PaymentStatus = 'paid' | 'pending' | 'scheduled';
+
 export type TransactionCategory = 
   | 'Salário'
   | 'Investimentos'
@@ -21,12 +23,16 @@ export interface Transaction {
   category: TransactionCategory;
   date: string;
   description?: string;
+  paymentStatus?: PaymentStatus;
+  dueDate?: string;
 }
 
 export interface FinancialSummary {
   totalIncome: number;
   totalExpense: number;
   balance: number;
+  totalPendingExpense: number;
+  totalPaidExpense: number;
 }
 
 export interface TransactionFilters {
@@ -34,6 +40,9 @@ export interface TransactionFilters {
   category?: TransactionCategory | 'all';
   startDate?: string;
   endDate?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  paymentStatus?: PaymentStatus | 'all';
 }
 
 export const INCOME_CATEGORIES: TransactionCategory[] = [

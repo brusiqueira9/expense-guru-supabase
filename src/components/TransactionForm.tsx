@@ -1,125 +1,99 @@
-import React, { useState } from "react";
+import React from "react";
 import { useTransactions } from "@/context/TransactionContext";
-import { TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
+import { Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES, PaymentStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 
-export function TransactionForm() {
-  const { addTransaction } = useTransactions();
-  const [type, setType] = useState<TransactionType>("expense");
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<TransactionCategory | "">("");
-  const [date, setDate] = useState(() => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
-  const [description, setDescription] = useState("");
+interface TransactionFormProps {
+  onSubmit?: () => void;
+  initialData?: Partial<Transaction>;
+}
+
+export function TransactionForm({ onSubmit, initialData }: TransactionFormProps) {
+  const { addTransaction, updateTransaction } = useTransactions();
+  const [type, setType] = React.useState<TransactionType>(initialData?.type || "expense");
+  const [amount, setAmount] = React.useState(initialData?.amount?.toString() || "");
+  const [category, setCategory] = React.useState<TransactionCategory | "">(initialData?.category || "");
+  const [description, setDescription] = React.useState(initialData?.description || "");
+  const [date, setDate] = React.useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [dueDate, setDueDate] = React.useState(initialData?.dueDate || "");
+  const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus>(
+    initialData?.paymentStatus || "pending"
+  );
+
+  const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!amount || !category || !date) {
+      alert("Por favor, preencha todos os campos obrigatórios");
       return;
     }
-    
-    // Garantir que a data seja mantida como está, sem conversão de timezone
-    const selectedDate = new Date(date);
-    const formattedDate = selectedDate.toISOString().split('T')[0];
-    
-    addTransaction({
+
+    const transaction = {
       type,
       amount: parseFloat(amount),
-      category: category as TransactionCategory,
-      date: formattedDate,
-      description: description.trim() || undefined,
-    });
-    
-    // Reset form
-    setAmount("");
-    setDescription("");
-    // Keep the same type and date for convenience
+      category,
+      description,
+      date,
+      dueDate: type === "expense" ? dueDate : undefined,
+      paymentStatus: type === "expense" ? paymentStatus : undefined,
+    };
+
+    if (initialData?.id) {
+      updateTransaction(initialData.id, transaction);
+    } else {
+      addTransaction(transaction);
+    }
+
+    if (onSubmit) onSubmit();
   };
 
-  const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 animate-fadeIn">
-      <div className="space-y-2">
-        <Label htmlFor="transaction-type">Tipo de Transação</Label>
-        <RadioGroup 
-          id="transaction-type" 
-          className="flex gap-4" 
-          value={type} 
-          onValueChange={(val) => {
-            setType(val as TransactionType);
-            setCategory(""); // Reset category when type changes
-          }}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <Button
+          type="button"
+          variant={type === "expense" ? "default" : "outline"}
+          className="w-full"
+          onClick={() => setType("expense")}
         >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem 
-              value="income" 
-              id="income" 
-              className="text-income" 
-            />
-            <Label 
-              htmlFor="income" 
-              className={cn("cursor-pointer", type === "income" ? "text-income font-medium" : "")}
-            >
-              Receita
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem 
-              value="expense" 
-              id="expense" 
-              className="text-expense" 
-            />
-            <Label 
-              htmlFor="expense" 
-              className={cn("cursor-pointer", type === "expense" ? "text-expense font-medium" : "")}
-            >
-              Despesa
-            </Label>
-          </div>
-        </RadioGroup>
+          <ArrowDownCircle className="w-4 h-4 mr-2" />
+          Despesa
+        </Button>
+        <Button
+          type="button"
+          variant={type === "income" ? "default" : "outline"}
+          className="w-full"
+          onClick={() => setType("income")}
+        >
+          <ArrowUpCircle className="w-4 h-4 mr-2" />
+          Receita
+        </Button>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="amount">Valor</Label>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-            R$
-          </div>
-          <Input
-            id="amount"
-            type="number"
-            min="0.01"
-            step="0.01"
-            className="pl-9"
-            placeholder="0,00"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
-        </div>
+        <Input
+          id="amount"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="0,00"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          required
+        />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="category">Categoria</Label>
-        <Select
-          value={category}
-          onValueChange={(value) => setCategory(value as TransactionCategory)}
-          required
-        >
+        <Select value={category} onValueChange={(value: TransactionCategory) => setCategory(value)}>
           <SelectTrigger>
             <SelectValue placeholder="Selecione uma categoria" />
           </SelectTrigger>
@@ -132,33 +106,60 @@ export function TransactionForm() {
           </SelectContent>
         </Select>
       </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="date">Data</Label>
-        <Input
-          id="date"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
-        />
-      </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="description">Descrição (opcional)</Label>
         <Textarea
           id="description"
-          placeholder="Adicione detalhes sobre esta transação"
+          placeholder="Digite uma descrição"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="resize-none"
-          rows={3}
         />
       </div>
-      
-      <Button type="submit" className="w-full group">
-        <PlusCircle className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
-        Adicionar Transação
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="date">Data</Label>
+          <Input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+        </div>
+
+        {type === "expense" && (
+          <div className="space-y-2">
+            <Label htmlFor="dueDate">Data de Vencimento</Label>
+            <Input
+              id="dueDate"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+
+      {type === "expense" && (
+        <div className="space-y-2">
+          <Label htmlFor="paymentStatus">Status do Pagamento</Label>
+          <Select value={paymentStatus} onValueChange={(value: PaymentStatus) => setPaymentStatus(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pendente</SelectItem>
+              <SelectItem value="paid">Pago</SelectItem>
+              <SelectItem value="scheduled">Agendado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <Button type="submit" className="w-full">
+        {initialData ? "Atualizar" : "Adicionar"} Transação
       </Button>
     </form>
   );

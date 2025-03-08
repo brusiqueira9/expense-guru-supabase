@@ -88,12 +88,23 @@ export function Sidebar() {
   };
 
   const getUserInitials = () => {
+    if (user?.user_metadata?.name) {
+      return user.user_metadata.name
+        .split(" ")
+        .map(part => part[0]?.toUpperCase())
+        .slice(0, 2)
+        .join("");
+    }
     if (!user?.email) return "?";
     return user.email
       .split("@")[0]
       .split(".")
       .map(part => part[0]?.toUpperCase())
       .join("");
+  };
+
+  const getUserDisplayName = () => {
+    return user?.user_metadata?.name || user?.email || "Usuário";
   };
 
   return (
@@ -115,8 +126,8 @@ export function Sidebar() {
               <AvatarFallback>{getUserInitials()}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col min-w-0">
-              <p className="text-sm font-medium truncate max-w-[160px]">{user.email}</p>
-              <p className="text-xs text-muted-foreground">Logado</p>
+              <p className="text-sm font-medium truncate max-w-[160px]">{getUserDisplayName()}</p>
+              <p className="text-xs text-muted-foreground truncate max-w-[160px]">{user.email}</p>
             </div>
           </div>
         </div>

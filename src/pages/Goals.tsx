@@ -16,7 +16,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface FinancialGoal {
   id: string;
@@ -36,6 +48,7 @@ export default function Goals() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<FinancialGoal | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [newGoal, setNewGoal] = useState<Partial<FinancialGoal>>({
     name: "",
     target_amount: 0,
@@ -93,7 +106,8 @@ export default function Goals() {
         const { error: updateError } = await supabase
           .from("goals")
           .update(goalData)
-          .eq("id", selectedGoal.id);
+          .eq("id", selectedGoal.id)
+          .eq("user_id", user.id);
         error = updateError;
       } else {
         const { error: insertError } = await supabase
@@ -114,13 +128,12 @@ export default function Goals() {
   };
 
   const handleDeleteGoal = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta meta?")) return;
-
     try {
       const { error } = await supabase
         .from("goals")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("user_id", user?.id);
 
       if (error) throw error;
 
@@ -140,13 +153,15 @@ export default function Goals() {
       target_amount: goal.target_amount,
       current_amount: goal.current_amount,
       deadline: goal.deadline,
-      category: goal.category,
+      category: goal.category || "",
     });
+    setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setIsEditing(false);
     setSelectedGoal(null);
+    setDialogOpen(false);
     setNewGoal({
       name: "",
       target_amount: 0,
@@ -177,20 +192,30 @@ export default function Goals() {
             Defina e acompanhe suas metas financeiras
           </p>
         </div>
-        <Dialog onOpenChange={(open) => !open && handleCloseDialog()}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => {
+              setIsEditing(false);
+              setNewGoal({
+                name: "",
+                target_amount: 0,
+                current_amount: 0,
+                deadline: "",
+                category: "",
+              });
+            }}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Meta
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent onInteractOutside={handleCloseDialog}>
             <DialogHeader>
               <DialogTitle>{isEditing ? "Editar Meta" : "Nova Meta Financeira"}</DialogTitle>
               <DialogDescription>
                 {isEditing ? "Atualize sua meta financeira" : "Defina uma nova meta para suas finanças"}
               </DialogDescription>
             </DialogHeader>
+            
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="goal-name">Nome da Meta</Label>
@@ -283,13 +308,33 @@ export default function Goals() {
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteGoal(goal.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir Meta</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir a meta "{goal.name}"? Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteGoal(goal.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
                 <CardDescription>{goal.category}</CardDescription>

@@ -1,15 +1,52 @@
 import React, { useState } from "react";
 import { useTransactions } from "@/context/TransactionContext";
-import { TransactionFilters, Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
+import { TransactionFilters, Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES, PaymentStatus } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, ArrowDownCircle, ArrowUpCircle, Filter, X, Pencil, Check, X as XIcon } from "lucide-react";
+import { Trash2, ArrowDownCircle, ArrowUpCircle, Filter, X, Pencil, Check, X as XIcon, Clock, CalendarClock, MoreVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const PaymentStatusBadge = ({ status }: { status?: PaymentStatus }) => {
+  if (!status) return null;
+
+  const variants = {
+    paid: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
+    pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100",
+    scheduled: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+  };
+
+  const icons = {
+    paid: <Check className="w-3 h-3 mr-1" />,
+    pending: <Clock className="w-3 h-3 mr-1" />,
+    scheduled: <CalendarClock className="w-3 h-3 mr-1" />,
+  };
+
+  const labels = {
+    paid: "Pago",
+    pending: "Pendente",
+    scheduled: "Agendado",
+  };
+
+  return (
+    <Badge variant="secondary" className={variants[status]}>
+      {icons[status]}
+      {labels[status]}
+    </Badge>
+  );
+};
 
 export function TransactionList() {
   const { 
@@ -18,19 +55,30 @@ export function TransactionList() {
     updateTransaction,
     filters, 
     updateFilters, 
-    clearFilters 
+    clearFilters,
+    summary,
+    updateTransactionStatus
   } = useTransactions();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Transaction>>({});
+  const [selectedTransaction, setSelectedTransaction] = React.useState<Transaction | null>(null);
 
-  const handleFilterChange = (key: keyof TransactionFilters, value: string | undefined) => {
-    updateFilters({ [key]: value });
+  const handleFilterChange = (key: keyof TransactionFilters, value: any) => {
+    if (value === "") {
+      const newFilters = { ...filters };
+      delete newFilters[key];
+      updateFilters(newFilters);
+    } else {
+      const newFilters = { ...filters, [key]: value };
+      updateFilters(newFilters);
+    }
   };
 
   const handleEdit = (transaction: Transaction) => {
     setEditingId(transaction.id);
     setEditForm(transaction);
+    setSelectedTransaction(transaction);
   };
 
   const handleSave = () => {
@@ -59,43 +107,18 @@ export function TransactionList() {
 
   const categories = editForm.type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
+  const handleStatusChange = (status: PaymentStatus) => {
+    if (selectedTransaction) {
+      updateTransactionStatus(selectedTransaction.id, status);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">Transações</h2>
         
-        <div className="flex flex-wrap gap-2">
-          <Select
-            value={filters.type}
-            onValueChange={(value) => handleFilterChange("type", value || undefined)}
-          >
-            <SelectTrigger className="min-w-[140px]">
-              <SelectValue placeholder="Todos os tipos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os tipos</SelectItem>
-              <SelectItem value="income">Receitas</SelectItem>
-              <SelectItem value="expense">Despesas</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select
-            value={filters.category}
-            onValueChange={(value) => handleFilterChange("category", value || undefined)}
-          >
-            <SelectTrigger className="min-w-[140px]">
-              <SelectValue placeholder="Todas categorias" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas categorias</SelectItem>
-              {[...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES].map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
+        <div className="flex items-center gap-2">
           {hasActiveFilters && (
             <Button
               variant="outline"
@@ -106,6 +129,162 @@ export function TransactionList() {
               <X className="h-4 w-4" />
             </Button>
           )}
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Filter className="h-4 w-4" />
+                Filtros
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="ml-2">
+                    {Object.keys(filters).length}
+                  </Badge>
+                )}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Filtros</DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="type">
+                    <AccordionTrigger>Tipo</AccordionTrigger>
+                    <AccordionContent>
+                      <Select
+                        value={filters.type}
+                        onValueChange={(value) => handleFilterChange("type", value || undefined)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todos os tipos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os tipos</SelectItem>
+                          <SelectItem value="income">Receitas</SelectItem>
+                          <SelectItem value="expense">Despesas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="category">
+                    <AccordionTrigger>Categoria</AccordionTrigger>
+                    <AccordionContent>
+                      <Select
+                        value={filters.category}
+                        onValueChange={(value) => handleFilterChange("category", value || undefined)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todas categorias" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas categorias</SelectItem>
+                          {[...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES].map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="date">
+                    <AccordionTrigger>Data</AccordionTrigger>
+                    <AccordionContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Data Inicial</Label>
+                        <Input
+                          type="date"
+                          value={filters.startDate || ""}
+                          onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Data Final</Label>
+                        <Input
+                          type="date"
+                          value={filters.endDate || ""}
+                          onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="amount">
+                    <AccordionTrigger>Valor</AccordionTrigger>
+                    <AccordionContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Valor Mínimo</Label>
+                        <Input
+                          type="number"
+                          placeholder="R$ 0,00"
+                          value={filters.minAmount || ""}
+                          onChange={(e) => handleFilterChange("minAmount", e.target.value ? Number(e.target.value) : "")}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Valor Máximo</Label>
+                        <Input
+                          type="number"
+                          placeholder="R$ 999.999,99"
+                          value={filters.maxAmount || ""}
+                          onChange={(e) => handleFilterChange("maxAmount", e.target.value ? Number(e.target.value) : "")}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="status">
+                    <AccordionTrigger>Status de Pagamento</AccordionTrigger>
+                    <AccordionContent>
+                      <Select
+                        value={filters.paymentStatus}
+                        onValueChange={(value) => handleFilterChange("paymentStatus", value || undefined)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todos os status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os status</SelectItem>
+                          <SelectItem value="paid">
+                            <div className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-green-500" />
+                              <span>Pagos</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="pending">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-yellow-500" />
+                              <span>Pendentes</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="scheduled">
+                            <div className="flex items-center gap-2">
+                              <CalendarClock className="h-4 w-4 text-blue-500" />
+                              <span>Agendados</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline"
+                    onClick={clearFilters}
+                    className="w-full"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
       
@@ -139,9 +318,14 @@ export function TransactionList() {
               <>
                 {incomeTransactions.length > 0 && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-1 bg-income rounded-full" />
-                      <h3 className="text-lg font-medium text-income">Receitas</h3>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-1 bg-income rounded-full" />
+                        <h3 className="text-lg font-medium text-income">Receitas</h3>
+                      </div>
+                      <Badge variant="secondary" className="text-income">
+                        {incomeTransactions.length} transação(ões)
+                      </Badge>
                     </div>
                     {incomeTransactions.map((transaction, index) => (
                       <TransactionCard
@@ -163,9 +347,19 @@ export function TransactionList() {
 
                 {expenseTransactions.length > 0 && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-1 bg-expense rounded-full" />
-                      <h3 className="text-lg font-medium text-expense">Despesas</h3>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-1 bg-expense rounded-full" />
+                        <h3 className="text-lg font-medium text-expense">Despesas</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-expense">
+                          {expenseTransactions.length} transação(ões)
+                        </Badge>
+                        {filters.paymentStatus && filters.paymentStatus !== 'all' && (
+                          <PaymentStatusBadge status={filters.paymentStatus as PaymentStatus} />
+                        )}
+                      </div>
                     </div>
                     {expenseTransactions.map((transaction, index) => (
                       <TransactionCard
@@ -200,7 +394,7 @@ interface TransactionCardProps {
   onDelete: (id: string) => void;
   editingId: string | null;
   editForm: Partial<Transaction>;
-  setEditForm: (form: Partial<Transaction>) => void;
+  setEditForm: React.Dispatch<React.SetStateAction<Partial<Transaction>>>;
   onSave: () => void;
   onCancel: () => void;
   categories: TransactionCategory[];
@@ -218,6 +412,13 @@ function TransactionCard({
   onCancel,
   categories
 }: TransactionCardProps) {
+  const { updateTransactionStatus } = useTransactions();
+  const isExpense = transaction.type === 'expense';
+
+  const handleStatusChange = (status: PaymentStatus) => {
+    updateTransactionStatus(transaction.id, status);
+  };
+
   return (
     <Card 
       className={cn(
@@ -308,9 +509,14 @@ function TransactionCard({
                   <div className="font-medium">
                     {transaction.description || (transaction.type === "income" ? "Receita" : "Despesa")}
                   </div>
-                  <Badge variant="outline" className="w-fit">
-                    {transaction.category}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="w-fit">
+                      {transaction.category}
+                    </Badge>
+                    {isExpense && (
+                      <PaymentStatusBadge status={transaction.paymentStatus} />
+                    )}
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-4">
@@ -327,6 +533,48 @@ function TransactionCard({
                     {formatDate(transaction.date)}
                   </div>
                   <div className="flex gap-1">
+                    {isExpense && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full text-muted-foreground hover:text-primary"
+                          >
+                            {transaction.paymentStatus === 'paid' ? (
+                              <Check className="h-4 w-4" />
+                            ) : transaction.paymentStatus === 'scheduled' ? (
+                              <CalendarClock className="h-4 w-4" />
+                            ) : (
+                              <Clock className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleStatusChange('paid')}
+                            className="gap-2"
+                          >
+                            <Check className="h-4 w-4 text-green-500" />
+                            <span>Marcar como pago</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleStatusChange('pending')}
+                            className="gap-2"
+                          >
+                            <Clock className="h-4 w-4 text-yellow-500" />
+                            <span>Marcar como pendente</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleStatusChange('scheduled')}
+                            className="gap-2"
+                          >
+                            <CalendarClock className="h-4 w-4 text-blue-500" />
+                            <span>Marcar como agendado</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

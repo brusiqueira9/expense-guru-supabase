@@ -33,6 +33,22 @@ export default function Settings() {
     language: "pt-BR"
   });
 
+  // Aplicar tema quando as preferências mudarem
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (preferences.dark_mode) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [preferences.dark_mode]);
+
+  // Detectar preferência do sistema ao carregar
+  useEffect(() => {
+    const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setPreferences(prev => ({ ...prev, dark_mode: isDarkMode }));
+  }, []);
+
   useEffect(() => {
     if (user?.id) {
       fetchUserPreferences();
@@ -70,11 +86,6 @@ export default function Settings() {
         toast.error('Usuário não autenticado');
         return;
       }
-
-      console.log('Salvando preferências:', {
-        user_id: user.id,
-        ...preferences
-      });
 
       // Primeiro, verificar se já existe um registro para o usuário
       const { data: existingData, error: fetchError } = await supabase
@@ -192,6 +203,60 @@ export default function Settings() {
     }
   };
 
+  const handleToggleDarkMode = async (checked: boolean) => {
+    setPreferences(prev => ({ ...prev, dark_mode: checked }));
+    
+    // Se o usuário estiver logado, salvar a preferência automaticamente
+    if (user?.id) {
+      try {
+        // Primeiro, verificar se já existe um registro
+        const { data: existingData, error: fetchError } = await supabase
+          .from('user_preferences')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          throw fetchError;
+        }
+
+        let error;
+        if (existingData?.id) {
+          // Atualizar registro existente
+          const { error: updateError } = await supabase
+            .from('user_preferences')
+            .update({
+              dark_mode: checked,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingData.id);
+          error = updateError;
+        } else {
+          // Criar novo registro
+          const { error: insertError } = await supabase
+            .from('user_preferences')
+            .insert([{
+              user_id: user.id,
+              dark_mode: checked,
+              name: preferences.name,
+              notifications: preferences.notifications,
+              currency: preferences.currency,
+              language: preferences.language,
+              updated_at: new Date().toISOString()
+            }]);
+          error = insertError;
+        }
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('Erro ao salvar modo escuro:', error);
+        // Reverter a mudança em caso de erro
+        setPreferences(prev => ({ ...prev, dark_mode: !checked }));
+        toast.error('Erro ao salvar preferência de tema');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -279,9 +344,20 @@ export default function Settings() {
               </div>
               <Switch
                 checked={preferences.dark_mode}
-                onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, dark_mode: checked }))}
+                onCheckedChange={handleToggleDarkMode}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Idioma e Região</CardTitle>
+            <CardDescription>
+              Configure o idioma e a moeda do aplicativo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="currency">Moeda</Label>
               <Select
@@ -298,6 +374,7 @@ export default function Settings() {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="language">Idioma</Label>
               <Select
