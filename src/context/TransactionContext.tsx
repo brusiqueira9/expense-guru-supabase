@@ -1,0 +1,149 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { Transaction, TransactionType, TransactionCategory, FinancialSummary, TransactionFilters } from "@/types";
+import { loadTransactions, saveTransactions } from "@/lib/storage";
+import { toast } from "sonner";
+
+interface TransactionContextType {
+  transactions: Transaction[];
+  filteredTransactions: Transaction[];
+  summary: FinancialSummary;
+  filters: TransactionFilters;
+  addTransaction: (transaction: Omit<Transaction, "id">) => void;
+  deleteTransaction: (id: string) => void;
+  updateTransaction: (id: string, transaction: Omit<Transaction, "id">) => void;
+  updateFilters: (filters: TransactionFilters) => void;
+  clearFilters: () => void;
+}
+
+const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
+
+export const TransactionProvider = ({ children }: { children: ReactNode }) => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [filters, setFilters] = useState<TransactionFilters>({});
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
+  const [summary, setSummary] = useState<FinancialSummary>({
+    totalIncome: 0,
+    totalExpense: 0,
+    balance: 0,
+  });
+
+  // Load transactions from localStorage on initial render
+  useEffect(() => {
+    const loadedTransactions = loadTransactions();
+    setTransactions(loadedTransactions);
+  }, []);
+
+  // Apply filters and calculate summary whenever transactions or filters change
+  useEffect(() => {
+    // Apply filters
+    let filtered = [...transactions];
+    
+    if (filters.type && filters.type !== "all") {
+      filtered = filtered.filter(t => t.type === filters.type);
+    }
+    
+    if (filters.category && filters.category !== "all") {
+      filtered = filtered.filter(t => t.category === filters.category);
+    }
+    
+    if (filters.startDate) {
+      filtered = filtered.filter(t => new Date(t.date) >= new Date(filters.startDate!));
+    }
+    
+    if (filters.endDate) {
+      filtered = filtered.filter(t => new Date(t.date) <= new Date(filters.endDate!));
+    }
+    
+    // Ordenar transações: primeiro por tipo (receitas primeiro, depois despesas) e depois por data
+    filtered.sort((a, b) => {
+      // Primeiro ordena por tipo (receitas primeiro)
+      if (a.type !== b.type) {
+        return a.type === 'income' ? -1 : 1;
+      }
+      // Se for do mesmo tipo, ordena por data (mais recente primeiro)
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+    
+    setFilteredTransactions(filtered);
+    
+    // Calculate summary
+    const incomeTotal = filtered
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+      
+    const expenseTotal = filtered
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+      
+    setSummary({
+      totalIncome: incomeTotal,
+      totalExpense: expenseTotal,
+      balance: incomeTotal - expenseTotal,
+    });
+  }, [transactions, filters]);
+
+  // Save transactions to localStorage whenever they change
+  useEffect(() => {
+    saveTransactions(transactions);
+  }, [transactions]);
+
+  const addTransaction = (transaction: Omit<Transaction, "id">) => {
+    const newTransaction = {
+      ...transaction,
+      id: crypto.randomUUID(),
+      date: transaction.date
+    };
+    
+    setTransactions(prev => [newTransaction, ...prev]);
+    toast.success("Transação adicionada com sucesso!");
+  };
+
+  const deleteTransaction = (id: string) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    toast.success("Transação removida com sucesso!");
+  };
+
+  const updateTransaction = (id: string, transaction: Omit<Transaction, "id">) => {
+    setTransactions(prev => prev.map(t => 
+      t.id === id ? { ...transaction, id, date: transaction.date } : t
+    ));
+    toast.success("Transação atualizada com sucesso!");
+  };
+
+  const updateFilters = (newFilters: TransactionFilters) => {
+    setFilters(prev => ({
+      ...prev,
+      ...newFilters,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({});
+  };
+
+  return (
+    <TransactionContext.Provider
+      value={{
+        transactions,
+        filteredTransactions,
+        summary,
+        filters,
+        addTransaction,
+        deleteTransaction,
+        updateTransaction,
+        updateFilters,
+        clearFilters,
+      }}
+    >
+      {children}
+    </TransactionContext.Provider>
+  );
+};
+
+export const useTransactions = () => {
+  const context = useContext(TransactionContext);
+  if (context === undefined) {
+    throw new Error('useTransactions must be used within a TransactionProvider');
+  }
+  return context;
+};
