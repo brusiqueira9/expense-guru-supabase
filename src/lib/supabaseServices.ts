@@ -37,7 +37,13 @@ const objectToCamelCase = (obj: any) => {
   if (!obj) return obj;
   const result: any = {};
   Object.keys(obj).forEach(key => {
-    result[toCamelCase(key)] = obj[key];
+    const camelKey = toCamelCase(key);
+    // Tratamento especial para payment_status
+    if (key === 'payment_status') {
+      result.paymentStatus = obj[key];
+    } else {
+      result[camelKey] = obj[key];
+    }
   });
   return result;
 };
@@ -74,13 +80,14 @@ export const transactionService = {
         .eq('user_id', userId);
 
       if (error) {
-        // Erro ao buscar transações
+        console.error('Erro ao buscar transações:', error);
         return [];
       }
 
-      return data || [];
+      // Converter os dados de snake_case para camelCase
+      return data ? data.map(objectToCamelCase) : [];
     } catch (error) {
-      // Erro ao buscar transações
+      console.error('Erro ao buscar transações:', error);
       return [];
     }
   },
@@ -88,28 +95,27 @@ export const transactionService = {
   // Adicionar uma nova transação
   async add(transaction: Omit<Transaction, 'id'> & { user_id: string }) {
     try {
-      console.log('Adicionando transação:', transaction);
-      
       // Criar um novo objeto com os campos normalizados
       const validatedTransaction = {
         ...transaction,
       };
       
       // Adicionar o campo payment_status com o valor validado
-      (validatedTransaction as any).payment_status = validatePaymentStatus(
+      const paymentStatus = validatePaymentStatus(
         transaction.paymentStatus, 
         transaction.type
       );
-      
-      // Remover o campo paymentStatus original para evitar duplicação
-      if ('paymentStatus' in validatedTransaction) {
-        delete (validatedTransaction as any).paymentStatus;
-      }
-      
+
       // Converter o objeto de camelCase para snake_case
       const snakeCaseTransaction = objectToSnakeCase(validatedTransaction);
       
-      console.log('Transação convertida para snake_case:', snakeCaseTransaction);
+      // Adicionar o payment_status após a conversão
+      if (paymentStatus) {
+        snakeCaseTransaction.payment_status = paymentStatus;
+      }
+      
+      // Remover o campo paymentStatus para evitar duplicação
+      delete snakeCaseTransaction.payment_status_status;
       
       const { data, error } = await supabase
         .from('transactions')
@@ -118,7 +124,7 @@ export const transactionService = {
         .single();
 
       if (error) {
-        console.error('Erro detalhado ao adicionar transação:', error);
+        console.error('Erro ao adicionar transação:', error);
         throw error;
       }
       
@@ -133,25 +139,59 @@ export const transactionService = {
   // Atualizar uma transação existente
   async update(id: string, transaction: Partial<Transaction>) {
     try {
-      // Criar um novo objeto com os campos normalizados
-      const validatedTransaction = {
-        ...transaction,
-      };
+      // Se estiver atualizando apenas o status de pagamento
+      if ('paymentStatus' in transaction && Object.keys(transaction).length === 1) {
+        const { data, error } = await supabase
+          .from('transactions')
+          .update({ payment_status: transaction.paymentStatus })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Erro ao atualizar status de pagamento:', error);
+          throw error;
+        }
+
+        return objectToCamelCase(data);
+      }
+
+      // Para outras atualizações
+      const validatedTransaction = { ...transaction };
       
       // Se o tipo e o status de pagamento estiverem presentes, validar o status
       if ('type' in transaction && 'paymentStatus' in transaction) {
-        (validatedTransaction as any).payment_status = validatePaymentStatus(
+        const paymentStatus = validatePaymentStatus(
           transaction.paymentStatus, 
           transaction.type as string
         );
         
-        // Remover o campo paymentStatus original para evitar duplicação
-        delete (validatedTransaction as any).paymentStatus;
+        // Converter para snake_case e adicionar o payment_status
+        const snakeCaseTransaction = objectToSnakeCase(validatedTransaction);
+        if (paymentStatus) {
+          snakeCaseTransaction.payment_status = paymentStatus;
+        }
+        
+        // Remover o campo paymentStatus para evitar duplicação
+        delete snakeCaseTransaction.payment_status_status;
+        
+        const { data, error } = await supabase
+          .from('transactions')
+          .update(snakeCaseTransaction)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Erro ao atualizar transação:', error);
+          throw error;
+        }
+        
+        return objectToCamelCase(data);
       }
       
-      // Converter o objeto de camelCase para snake_case
+      // Para atualizações que não envolvem o status de pagamento
       const snakeCaseTransaction = objectToSnakeCase(validatedTransaction);
-      
       const { data, error } = await supabase
         .from('transactions')
         .update(snakeCaseTransaction)
@@ -160,11 +200,10 @@ export const transactionService = {
         .single();
 
       if (error) {
-        console.error('Erro detalhado ao atualizar transação:', error);
+        console.error('Erro ao atualizar transação:', error);
         throw error;
       }
       
-      // Converter o objeto retornado de snake_case para camelCase
       return objectToCamelCase(data);
     } catch (error) {
       console.error('Erro ao atualizar transação:', error);
@@ -181,7 +220,7 @@ export const transactionService = {
         .eq('id', id);
 
       if (error) {
-        console.error('Erro detalhado ao excluir transação:', error);
+        console.error('Erro ao excluir transação:', error);
         throw error;
       }
       
@@ -203,31 +242,31 @@ export const transactionService = {
         };
         
         // Adicionar o campo payment_status com o valor validado
-        (validatedTransaction as any).payment_status = validatePaymentStatus(
+        const paymentStatus = validatePaymentStatus(
           transaction.paymentStatus, 
           transaction.type
         );
+
+        // Converter para snake_case
+        const snakeCaseTransaction = objectToSnakeCase(validatedTransaction);
         
-        // Remover o campo paymentStatus original para evitar duplicação
-        if ('paymentStatus' in validatedTransaction) {
-          delete (validatedTransaction as any).paymentStatus;
+        // Adicionar o payment_status após a conversão
+        if (paymentStatus) {
+          snakeCaseTransaction.payment_status = paymentStatus;
         }
         
-        return validatedTransaction;
+        // Remover o campo paymentStatus para evitar duplicação
+        delete snakeCaseTransaction.payment_status_status;
+        
+        return snakeCaseTransaction;
       });
-      
-      // Converter para snake_case
-      const snakeCaseTransactions = validatedTransactions.map(objectToSnakeCase);
 
-      console.log('Migrando transações:', snakeCaseTransactions);
-      
-      // Insere todas as transações de uma vez
       const { data, error } = await supabase
         .from('transactions')
-        .insert(snakeCaseTransactions);
+        .insert(validatedTransactions);
 
       if (error) {
-        console.error('Erro detalhado ao migrar transações:', error);
+        console.error('Erro ao migrar transações:', error);
         throw error;
       }
       
