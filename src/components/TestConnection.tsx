@@ -1,6 +1,10 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { supabaseHelper } from '../lib/supabase'
+import { useAuth } from '@/hooks/useAuth'
+import { transactionService, categoryService } from '@/lib/supabaseServices'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
+import { TransactionType, TransactionCategory } from '@/types'
 
 export function TestConnection() {
   const [email, setEmail] = useState('')
@@ -13,7 +17,7 @@ export function TestConnection() {
     e.preventDefault()
     setLoading(true)
     try {
-      await signUp(email, password)
+      await signUp(email, password, 'Novo Usuário')
       setMessage('Cadastro realizado! Verifique seu email.')
     } catch (error: any) {
       setMessage(`Erro no cadastro: ${error.message}`)
@@ -51,24 +55,39 @@ export function TestConnection() {
     }
 
     try {
-      // Tenta adicionar uma categoria de teste
-      const category = await supabaseHelper.categories.add({
-        name: 'Categoria Teste',
-        user_id: user.id
-      })
+      setLoading(true)
       
-      // Tenta adicionar uma despesa de teste
-      const expense = await supabaseHelper.expenses.add({
-        description: 'Despesa Teste',
-        amount: 100,
-        category: 'Categoria Teste',
-        date: new Date().toISOString().split('T')[0],
+      // Tenta adicionar uma categoria de teste
+      const categoryData = {
+        name: 'Categoria Teste',
+        description: 'Categoria para testes',
+        type: 'expense' as 'income' | 'expense',
         user_id: user.id
-      })
+      }
+      
+      await categoryService.add(categoryData)
+      
+      // Tenta adicionar uma transação de teste
+      const transactionData = {
+        type: 'expense' as TransactionType,
+        amount: 100,
+        category: 'Outras Despesas' as TransactionCategory,
+        date: new Date().toISOString().split('T')[0],
+        description: 'Transação de teste',
+        paymentStatus: 'pending' as 'pending' | 'paid',
+        user_id: user.id
+      }
+      
+      await transactionService.add(transactionData)
 
       setMessage('Teste realizado com sucesso! Dados inseridos no banco.')
+      toast.success('Teste de banco de dados concluído com sucesso!')
     } catch (error: any) {
+      console.error('Erro no teste do banco:', error)
       setMessage(`Erro no teste do banco: ${error.message}`)
+      toast.error(`Erro no teste do banco: ${error.message}`)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -98,7 +117,7 @@ export function TestConnection() {
         <form className="space-y-4">
           <div>
             <label className="block" htmlFor="email">Email:</label>
-            <input
+            <Input
               id="email"
               type="email"
               value={email}
@@ -110,7 +129,7 @@ export function TestConnection() {
           </div>
           <div>
             <label className="block" htmlFor="password">Senha:</label>
-            <input
+            <Input
               id="password"
               type="password"
               value={password}
@@ -120,28 +139,31 @@ export function TestConnection() {
               placeholder="Digite sua senha"
             />
           </div>
-          <div className="space-x-2">
-            <button
-              onClick={handleSignUp}
-              className="bg-green-500 text-white px-4 py-2 rounded"
-              disabled={loading}
-            >
-              Cadastrar
-            </button>
-            <button
+          
+          <div className="flex space-x-2">
+            <Button
+              type="button"
               onClick={handleSignIn}
-              className="bg-blue-500 text-white px-4 py-2 rounded"
               disabled={loading}
+              className="bg-blue-500 text-white px-4 py-2 rounded"
             >
               Entrar
-            </button>
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSignUp}
+              disabled={loading}
+              className="bg-green-500 text-white px-4 py-2 rounded"
+            >
+              Cadastrar
+            </Button>
           </div>
         </form>
       )}
-
+      
       {message && (
-        <div className={`mt-4 p-2 rounded ${message.includes('Erro') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-          {message}
+        <div className="mt-4 p-2 bg-gray-100 rounded">
+          <p>{message}</p>
         </div>
       )}
     </div>

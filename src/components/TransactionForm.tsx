@@ -1,12 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTransactions } from "@/context/TransactionContext";
-import { Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES, PaymentStatus } from "@/types";
+import { Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES, PaymentStatus, RecurrenceType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Calendar, CalendarClock, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface TransactionFormProps {
   onSubmit?: () => void;
@@ -14,140 +17,181 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ onSubmit, initialData }: TransactionFormProps) {
-  const { addTransaction, updateTransaction } = useTransactions();
-  const [type, setType] = React.useState<TransactionType>(initialData?.type || "expense");
-  const [amount, setAmount] = React.useState(initialData?.amount?.toString() || "");
-  const [category, setCategory] = React.useState<TransactionCategory | "">(initialData?.category || "");
-  const [description, setDescription] = React.useState(initialData?.description || "");
-  const [date, setDate] = React.useState(initialData?.date || new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = React.useState(initialData?.dueDate || "");
-  const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus>(
-    initialData?.paymentStatus || "pending"
-  );
-
-  const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-
+  const { addTransaction } = useTransactions();
+  const [type, setType] = useState<TransactionType>(initialData?.type || 'expense');
+  const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
+  const [category, setCategory] = useState<TransactionCategory | ''>(initialData?.category || '');
+  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(initialData?.paymentStatus || 'pending');
+  const [dueDate, setDueDate] = useState(initialData?.dueDate || '');
+  
+  // Campos para recorrência
+  const [isRecurring, setIsRecurring] = useState(initialData?.recurrence && initialData.recurrence !== 'none');
+  const [recurrence, setRecurrence] = useState<RecurrenceType>(initialData?.recurrence || 'none');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState(initialData?.recurrenceEndDate || '');
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !category || !date) {
-      alert("Por favor, preencha todos os campos obrigatórios");
-      return;
-    }
-
-    const transaction = {
+    if (!amount || !category || !date) return;
+    
+    const transaction: Omit<Transaction, "id"> = {
       type,
       amount: parseFloat(amount),
-      category,
-      description,
+      category: category as TransactionCategory,
       date,
-      dueDate: type === "expense" ? dueDate : undefined,
-      paymentStatus: type === "expense" ? paymentStatus : undefined,
+      description: description || undefined,
     };
-
-    if (initialData?.id) {
-      updateTransaction(initialData.id, transaction);
-    } else {
-      addTransaction(transaction);
+    
+    // Adicionar campos específicos para despesas
+    if (type === 'expense') {
+      transaction.paymentStatus = paymentStatus;
+      if (dueDate) transaction.dueDate = dueDate;
     }
-
+    
+    // Adicionar campos de recorrência se aplicável
+    if (isRecurring && recurrence !== 'none') {
+      transaction.recurrence = recurrence;
+      if (recurrenceEndDate) transaction.recurrenceEndDate = recurrenceEndDate;
+    }
+    
+    addTransaction(transaction);
+    
     if (onSubmit) onSubmit();
+    
+    // Limpar o formulário
+    setAmount('');
+    setCategory('');
+    setDescription('');
+    setDueDate('');
+    setRecurrence('none');
+    setRecurrenceEndDate('');
+    setIsRecurring(false);
   };
-
+  
+  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Button
-          type="button"
-          variant={type === "expense" ? "default" : "outline"}
-          className="w-full"
-          onClick={() => setType("expense")}
-        >
-          <ArrowDownCircle className="w-4 h-4 mr-2" />
-          Despesa
-        </Button>
-        <Button
-          type="button"
-          variant={type === "income" ? "default" : "outline"}
-          className="w-full"
-          onClick={() => setType("income")}
-        >
-          <ArrowUpCircle className="w-4 h-4 mr-2" />
-          Receita
-        </Button>
+        <div>
+          <Label htmlFor="type">Tipo</Label>
+          <div className="flex mt-1 space-x-2">
+            <Button
+              type="button"
+              variant={type === 'expense' ? "default" : "outline"}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2",
+                type === 'expense' ? "bg-red-500 hover:bg-red-600" : ""
+              )}
+              onClick={() => setType('expense')}
+            >
+              <ArrowDownCircle className="h-4 w-4" />
+              Despesa
+            </Button>
+            <Button
+              type="button"
+              variant={type === 'income' ? "default" : "outline"}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2",
+                type === 'income' ? "bg-green-500 hover:bg-green-600" : ""
+              )}
+              onClick={() => setType('income')}
+            >
+              <ArrowUpCircle className="h-4 w-4" />
+              Receita
+            </Button>
+          </div>
+        </div>
+        
+        <div>
+          <Label htmlFor="amount">Valor</Label>
+          <Input
+            id="amount"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0,00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+            className="mt-1"
+          />
+        </div>
       </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="amount">Valor</Label>
-        <Input
-          id="amount"
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="0,00"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
+      
+      <div>
         <Label htmlFor="category">Categoria</Label>
-        <Select value={category} onValueChange={(value: TransactionCategory) => setCategory(value)}>
+        <Select
+          value={category}
+          onValueChange={(value) => setCategory(value as TransactionCategory)}
+          required
+        >
           <SelectTrigger>
             <SelectValue placeholder="Selecione uma categoria" />
           </SelectTrigger>
           <SelectContent>
             {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Descrição (opcional)</Label>
-        <Textarea
-          id="description"
-          placeholder="Digite uma descrição"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-
+      
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
+        <div>
           <Label htmlFor="date">Data</Label>
-          <Input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </div>
-
-        {type === "expense" && (
-          <div className="space-y-2">
-            <Label htmlFor="dueDate">Data de Vencimento</Label>
+          <div className="relative">
             <Input
-              id="dueDate"
+              id="date"
               type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="mt-1"
             />
+            <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+          </div>
+        </div>
+        
+        {type === 'expense' && (
+          <div>
+            <Label htmlFor="dueDate">Data de Vencimento</Label>
+            <div className="relative">
+              <Input
+                id="dueDate"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="mt-1"
+              />
+              <CalendarClock className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+            </div>
           </div>
         )}
       </div>
-
-      {type === "expense" && (
-        <div className="space-y-2">
-          <Label htmlFor="paymentStatus">Status do Pagamento</Label>
-          <Select value={paymentStatus} onValueChange={(value: PaymentStatus) => setPaymentStatus(value)}>
+      
+      <div>
+        <Label htmlFor="description">Descrição</Label>
+        <Textarea
+          id="description"
+          placeholder="Descrição opcional"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="mt-1"
+        />
+      </div>
+      
+      {type === 'expense' && (
+        <div>
+          <Label>Status de Pagamento</Label>
+          <Select
+            value={paymentStatus}
+            onValueChange={(value) => setPaymentStatus(value as PaymentStatus)}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione o status" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pending">Pendente</SelectItem>
@@ -157,9 +201,63 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
           </Select>
         </div>
       )}
-
+      
+      {/* Seção de Recorrência */}
+      <div className="space-y-2 pt-2 border-t">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="isRecurring" className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Transação Recorrente
+          </Label>
+          <Switch
+            id="isRecurring"
+            checked={isRecurring}
+            onCheckedChange={setIsRecurring}
+          />
+        </div>
+        
+        {isRecurring && (
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label htmlFor="recurrence">Frequência</Label>
+              <Select
+                value={recurrence}
+                onValueChange={(value) => setRecurrence(value as RecurrenceType)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Diária</SelectItem>
+                  <SelectItem value="weekly">Semanal</SelectItem>
+                  <SelectItem value="monthly">Mensal</SelectItem>
+                  <SelectItem value="yearly">Anual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="recurrenceEndDate">Data Final (opcional)</Label>
+              <div className="relative">
+                <Input
+                  id="recurrenceEndDate"
+                  type="date"
+                  value={recurrenceEndDate}
+                  onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                  className="mt-1"
+                />
+                <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Deixe em branco para recorrência sem data final
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+      
       <Button type="submit" className="w-full">
-        {initialData ? "Atualizar" : "Adicionar"} Transação
+        Salvar Transação
       </Button>
     </form>
   );

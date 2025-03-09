@@ -2,6 +2,8 @@ export type TransactionType = 'income' | 'expense';
 
 export type PaymentStatus = 'paid' | 'pending' | 'scheduled';
 
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+
 export type TransactionCategory = 
   | 'Salário'
   | 'Investimentos'
@@ -25,6 +27,9 @@ export interface Transaction {
   description?: string;
   paymentStatus?: PaymentStatus;
   dueDate?: string;
+  recurrence?: RecurrenceType;
+  recurrenceEndDate?: string;
+  parentTransactionId?: string;
 }
 
 export interface FinancialSummary {
@@ -33,6 +38,7 @@ export interface FinancialSummary {
   balance: number;
   totalPendingExpense: number;
   totalPaidExpense: number;
+  totalScheduledExpense: number;
 }
 
 export interface TransactionFilters {
@@ -43,6 +49,7 @@ export interface TransactionFilters {
   minAmount?: number;
   maxAmount?: number;
   paymentStatus?: PaymentStatus | 'all';
+  recurrence?: RecurrenceType | 'all';
 }
 
 export const INCOME_CATEGORIES: TransactionCategory[] = [

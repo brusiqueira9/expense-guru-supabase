@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SettingsIcon, Bell, Lock, Palette, Trash2 } from "lucide-react";
+import { SettingsIcon, Lock, Palette, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -14,7 +14,6 @@ interface UserPreferences {
   id?: string;
   user_id?: string;
   name: string;
-  notifications: boolean;
   dark_mode: boolean;
   currency: string;
   language: string;
@@ -27,7 +26,6 @@ export default function Settings() {
   const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState<UserPreferences>({
     name: user?.user_metadata?.name || "",
-    notifications: true,
     dark_mode: false,
     currency: "BRL",
     language: "pt-BR"
@@ -239,7 +237,6 @@ export default function Settings() {
               user_id: user.id,
               dark_mode: checked,
               name: preferences.name,
-              notifications: preferences.notifications,
               currency: preferences.currency,
               language: preferences.language,
               updated_at: new Date().toISOString()
@@ -293,32 +290,6 @@ export default function Settings() {
                 type="email"
                 value={user?.email || ""}
                 disabled
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notificações
-            </CardTitle>
-            <CardDescription>
-              Configure suas preferências de notificação
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Notificações por E-mail</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receba atualizações sobre suas finanças
-                </p>
-              </div>
-              <Switch
-                checked={preferences.notifications}
-                onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, notifications: checked }))}
               />
             </div>
           </CardContent>

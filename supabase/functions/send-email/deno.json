@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "importMap": {
+    "imports": {
+      "http/": "https://deno.land/std@0.168.0/http/",
+      "smtp/": "https://deno.land/x/smtp@v0.7.0/"
+    }
+  }
+} 

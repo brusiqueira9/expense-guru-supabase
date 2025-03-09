@@ -11,6 +11,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/formatters';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { deleteWallet, updateWallet, createWallet } from '@/lib/supabaseServices';
 
 interface Wallet {
   id: number;
@@ -21,8 +24,10 @@ interface Wallet {
 }
 
 export default function Wallets() {
+  const { user } = useAuth();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   const [newWallet, setNewWallet] = useState({
     name: '',
     description: '',
@@ -66,6 +71,64 @@ export default function Wallets() {
   }
 
   const totalBalance = wallets.reduce((sum, wallet) => sum + wallet.balance, 0);
+
+  const handleDeleteWallet = async (walletId: string) => {
+    try {
+      // Excluindo carteira
+      
+      const success = await deleteWallet(walletId);
+      
+      if (success) {
+        // Carteira excluída com sucesso
+        toast.success('Carteira excluída com sucesso!');
+        fetchWallets();
+      } else {
+        // Erro ao excluir carteira
+        toast.error('Erro ao excluir carteira');
+      }
+    } catch (error) {
+      // Erro ao excluir carteira
+      toast.error('Erro ao excluir carteira');
+    }
+  };
+
+  const handleSaveWallet = async (wallet: Wallet) => {
+    try {
+      // Salvando carteira
+      
+      if (wallet.id) {
+        const updatedWallet = await updateWallet(wallet);
+        
+        if (updatedWallet) {
+          // Carteira atualizada com sucesso
+          toast.success('Carteira atualizada com sucesso!');
+          fetchWallets();
+          setSelectedWallet(null);
+        } else {
+          // Erro ao atualizar carteira
+          toast.error('Erro ao atualizar carteira');
+        }
+      } else {
+        const newWallet = await createWallet({
+          ...wallet,
+          user_id: user?.id || '',
+        });
+        
+        if (newWallet) {
+          // Carteira criada com sucesso
+          toast.success('Carteira criada com sucesso!');
+          fetchWallets();
+          setSelectedWallet(null);
+        } else {
+          // Erro ao criar carteira
+          toast.error('Erro ao criar carteira');
+        }
+      }
+    } catch (error) {
+      // Erro ao salvar carteira
+      toast.error('Erro ao salvar carteira');
+    }
+  };
 
   return (
     <div className="space-y-6">

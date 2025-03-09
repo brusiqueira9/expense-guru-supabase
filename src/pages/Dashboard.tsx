@@ -80,6 +80,7 @@ export default function Dashboard() {
   const totalExpenses = summary.totalExpense;
   const paidPercentage = (summary.totalPaidExpense / totalExpenses) * 100;
   const pendingPercentage = (summary.totalPendingExpense / totalExpenses) * 100;
+  const scheduledPercentage = (summary.totalScheduledExpense / totalExpenses) * 100;
 
   // Encontrar maiores despesas e receitas do mês
   const topExpenses = currentMonthTransactions
@@ -278,6 +279,21 @@ export default function Dashboard() {
                   />
                 </Progress>
               </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <CalendarClockIcon className="h-4 w-4 text-blue-500" />
+                    <span>Agendadas</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(summary.totalScheduledExpense)}</span>
+                </div>
+                <Progress value={scheduledPercentage} className="h-2">
+                  <div 
+                    className="h-full bg-blue-500 transition-all" 
+                    style={{ width: `${scheduledPercentage}%` }} 
+                  />
+                </Progress>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
@@ -342,9 +358,20 @@ export default function Dashboard() {
                         <p className="text-sm font-medium">{expense.description || expense.category}</p>
                         <p className="text-xs text-muted-foreground">{expense.category}</p>
                       </div>
-                      <span className="text-sm font-medium text-red-500">
-                        {formatCurrency(expense.amount)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-red-500">
+                          {formatCurrency(expense.amount)}
+                        </span>
+                        {expense.paymentStatus === 'paid' && (
+                          <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                        )}
+                        {expense.paymentStatus === 'pending' && (
+                          <AlertCircleIcon className="h-4 w-4 text-yellow-500" />
+                        )}
+                        {expense.paymentStatus === 'scheduled' && (
+                          <CalendarClockIcon className="h-4 w-4 text-blue-500" />
+                        )}
+                      </div>
                     </div>
                   ))
                 ) : (

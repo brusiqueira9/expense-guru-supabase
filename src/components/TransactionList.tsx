@@ -1,16 +1,24 @@
 import React, { useState } from "react";
 import { useTransactions } from "@/context/TransactionContext";
-import { TransactionFilters, Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES, PaymentStatus } from "@/types";
+import { Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES, PaymentStatus, RecurrenceType } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, ArrowDownCircle, ArrowUpCircle, Filter, X, Pencil, Check, X as XIcon, Clock, CalendarClock, MoreVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Trash2, ArrowDownCircle, ArrowUpCircle, Filter, X, Pencil, Check, X as XIcon, Clock, CalendarClock, MoreVertical, ArrowDownUp, Calendar, Edit, Trash, RefreshCw } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
@@ -64,17 +72,6 @@ export function TransactionList() {
   const [editForm, setEditForm] = useState<Partial<Transaction>>({});
   const [selectedTransaction, setSelectedTransaction] = React.useState<Transaction | null>(null);
 
-  const handleFilterChange = (key: keyof TransactionFilters, value: any) => {
-    if (value === "") {
-      const newFilters = { ...filters };
-      delete newFilters[key];
-      updateFilters(newFilters);
-    } else {
-      const newFilters = { ...filters, [key]: value };
-      updateFilters(newFilters);
-    }
-  };
-
   const handleEdit = (transaction: Transaction) => {
     setEditingId(transaction.id);
     setEditForm(transaction);
@@ -94,6 +91,9 @@ export function TransactionList() {
       description: editForm.description,
       dueDate: editForm.type === 'expense' ? editForm.dueDate : undefined,
       paymentStatus: editForm.type === 'expense' ? editForm.paymentStatus : undefined,
+      recurrence: editForm.recurrence || 'none',
+      recurrenceEndDate: editForm.recurrenceEndDate,
+      parentTransactionId: editForm.parentTransactionId
     });
 
     setEditingId(null);
@@ -120,174 +120,17 @@ export function TransactionList() {
       <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">Transações</h2>
         
-        <div className="flex items-center gap-2">
-          {hasActiveFilters && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={clearFilters}
-              className="shrink-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-          
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filtros
-                {hasActiveFilters && (
-                  <Badge variant="secondary" className="ml-2">
-                    {Object.keys(filters).length}
-                  </Badge>
-                )}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>Filtros</DialogTitle>
-              </DialogHeader>
-              
-              <div className="space-y-4">
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="type">
-                    <AccordionTrigger>Tipo</AccordionTrigger>
-                    <AccordionContent>
-                      <Select
-                        value={filters.type}
-                        onValueChange={(value) => handleFilterChange("type", value || undefined)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Todos os tipos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos os tipos</SelectItem>
-                          <SelectItem value="income">Receitas</SelectItem>
-                          <SelectItem value="expense">Despesas</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="category">
-                    <AccordionTrigger>Categoria</AccordionTrigger>
-                    <AccordionContent>
-                      <Select
-                        value={filters.category}
-                        onValueChange={(value) => handleFilterChange("category", value || undefined)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Todas categorias" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas categorias</SelectItem>
-                          {[...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES].map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="date">
-                    <AccordionTrigger>Data</AccordionTrigger>
-                    <AccordionContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Data Inicial</Label>
-                        <Input
-                          type="date"
-                          value={filters.startDate || ""}
-                          onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Data Final</Label>
-                        <Input
-                          type="date"
-                          value={filters.endDate || ""}
-                          onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                        />
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="amount">
-                    <AccordionTrigger>Valor</AccordionTrigger>
-                    <AccordionContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Valor Mínimo</Label>
-                        <Input
-                          type="number"
-                          placeholder="R$ 0,00"
-                          value={filters.minAmount || ""}
-                          onChange={(e) => handleFilterChange("minAmount", e.target.value ? Number(e.target.value) : "")}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Valor Máximo</Label>
-                        <Input
-                          type="number"
-                          placeholder="R$ 999.999,99"
-                          value={filters.maxAmount || ""}
-                          onChange={(e) => handleFilterChange("maxAmount", e.target.value ? Number(e.target.value) : "")}
-                        />
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="status">
-                    <AccordionTrigger>Status de Pagamento</AccordionTrigger>
-                    <AccordionContent>
-                      <Select
-                        value={filters.paymentStatus}
-                        onValueChange={(value) => handleFilterChange("paymentStatus", value || undefined)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Todos os status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos os status</SelectItem>
-                          <SelectItem value="paid">
-                            <div className="flex items-center gap-2">
-                              <Check className="h-4 w-4 text-green-500" />
-                              <span>Pagos</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="pending">
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-yellow-500" />
-                              <span>Pendentes</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="scheduled">
-                            <div className="flex items-center gap-2">
-                              <CalendarClock className="h-4 w-4 text-blue-500" />
-                              <span>Agendados</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-                
-                {hasActiveFilters && (
-                  <Button
-                    variant="outline"
-                    onClick={clearFilters}
-                    className="w-full"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Limpar filtros
-                  </Button>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+        {hasActiveFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearFilters}
+            className="shrink-0 gap-2"
+          >
+            <X className="h-4 w-4" />
+            Limpar filtros
+          </Button>
+        )}
       </div>
       
       {filteredTransactions.length === 0 ? (
@@ -507,6 +350,34 @@ function TransactionCard({
                     </Select>
                   )}
                 </div>
+                <div className="flex gap-2">
+                  <Select
+                    value={editForm.recurrence || "none"}
+                    onValueChange={(value) => setEditForm(prev => ({ ...prev, recurrence: value as RecurrenceType }))}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Recorrência" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem recorrência</SelectItem>
+                      <SelectItem value="daily">Diária</SelectItem>
+                      <SelectItem value="weekly">Semanal</SelectItem>
+                      <SelectItem value="monthly">Mensal</SelectItem>
+                      <SelectItem value="yearly">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {editForm.recurrence && editForm.recurrence !== 'none' && (
+                    <Input
+                      type="date"
+                      value={editForm.recurrenceEndDate || ""}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, recurrenceEndDate: e.target.value }))}
+                      className="flex-1"
+                      placeholder="Data Final (opcional)"
+                    />
+                  )}
+                </div>
+                
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
@@ -538,7 +409,21 @@ function TransactionCard({
                     "font-medium",
                     "text-foreground"
                   )}>
-                    {transaction.description || (transaction.type === "income" ? "Receita" : "Despesa")}
+                    <h3 className="font-medium">
+                      {transaction.description || transaction.category}
+                    </h3>
+                    {transaction.recurrence && transaction.recurrence !== 'none' && (
+                      <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                        <RefreshCw className="h-3 w-3" />
+                        {transaction.recurrence === 'daily' && 'Diária'}
+                        {transaction.recurrence === 'weekly' && 'Semanal'}
+                        {transaction.recurrence === 'monthly' && 'Mensal'}
+                        {transaction.recurrence === 'yearly' && 'Anual'}
+                      </Badge>
+                    )}
+                    {transaction.parentTransactionId && (
+                      <Badge variant="outline" className="text-xs">Recorrente</Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className={cn(
