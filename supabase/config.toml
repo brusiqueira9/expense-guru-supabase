@@ -1,0 +1,12 @@
+# Configuração do Supabase CLI
+# Este arquivo configura o comportamento das funções Edge
+
+[functions]
+  [functions.send-email]
+    verify_jwt = false
+    
+    [functions.send-email.cors]
+      allowed_origins = ["*"]
+      allowed_methods = ["POST", "OPTIONS"]
+      allowed_headers = ["Content-Type", "Authorization"]
+      max_age = 86400 
