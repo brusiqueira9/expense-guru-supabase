@@ -18,7 +18,7 @@ export function TestConnection() {
     setLoading(true)
     try {
       await signUp(email, password, 'Novo Usuário')
-      setMessage('Cadastro realizado! Verifique seu email.')
+      setMessage('Cadastro realizado com sucesso!')
     } catch (error: any) {
       setMessage(`Erro no cadastro: ${error.message}`)
     } finally {

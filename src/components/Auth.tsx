@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
-import { Eye, EyeOff, ArrowRight, Lock, Mail, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Lock, Mail } from 'lucide-react';
 import Logo from './Logo';
 import { motion } from 'framer-motion';
 import BackgroundAnimation from './BackgroundAnimation';
+import { useNotifications } from '../hooks/useNotifications';
+import { LoadingButton } from './ui/loading-button';
 
 export function Auth() {
   const [email, setEmail] = useState('');
@@ -17,6 +18,7 @@ export function Auth() {
   const [isInputFocused, setIsInputFocused] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signIn, session } = useAuth();
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     if (session) {
@@ -28,11 +30,62 @@ export function Auth() {
     e.preventDefault();
     if (loading) return;
 
+    // Validações básicas
+    if (!email) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe seu email',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (!password) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe sua senha',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Validação de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      addNotification({
+        title: 'Email inválido',
+        message: 'Por favor, informe um email válido',
+        type: 'error'
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       await signIn(email, password);
+      addNotification({
+        title: 'Login realizado',
+        message: 'Bem-vindo de volta!',
+        type: 'success'
+      });
     } catch (error: any) {
       console.error('Erro no login:', error);
+      let errorMessage = 'Ocorreu um erro ao fazer login';
+      
+      // Tratamento de erros específicos do Supabase
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Email ou senha incorretos';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Por favor, confirme seu email antes de fazer login';
+      } else if (error.message.includes('Too many requests')) {
+        errorMessage = 'Muitas tentativas de login. Por favor, aguarde alguns minutos';
+      }
+
+      addNotification({
+        title: 'Erro no login',
+        message: errorMessage,
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -113,17 +166,15 @@ export function Auth() {
               </div>
             </div>
 
-            <Button
+            <LoadingButton
               type="submit"
-              disabled={loading}
+              loading={loading}
+              loadingText="Entrando..."
               className="w-full bg-black text-white hover:bg-gray-800 transition-all duration-300 group relative overflow-hidden"
             >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                {loading ? 'Processando...' : 'Entrar'}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </span>
-              <span className="absolute inset-0 bg-gray-800 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
-            </Button>
+              Entrar
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </LoadingButton>
 
             <div className="text-center">
               <button

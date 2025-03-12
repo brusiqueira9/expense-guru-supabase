@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import {
   Dialog,
@@ -14,6 +13,8 @@ import { formatCurrency } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { deleteWallet, updateWallet, createWallet } from '@/lib/supabaseServices';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Wallet {
   id: number;
@@ -25,8 +26,10 @@ interface Wallet {
 
 export default function Wallets() {
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   const [newWallet, setNewWallet] = useState({
     name: '',
@@ -49,6 +52,11 @@ export default function Wallets() {
       setWallets(data || []);
     } catch (error) {
       console.error('Erro ao buscar carteiras:', error);
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível carregar suas carteiras',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -56,17 +64,52 @@ export default function Wallets() {
 
   async function handleCreateWallet(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    // Validações
+    if (!newWallet.name.trim()) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe o nome da carteira',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (newWallet.balance < 0) {
+      addNotification({
+        title: 'Valor inválido',
+        message: 'O saldo inicial não pode ser negativo',
+        type: 'error'
+      });
+      return;
+    }
+
     try {
+      setIsSubmitting(true);
       const { error } = await supabase
         .from('wallets')
         .insert([newWallet]);
 
       if (error) throw error;
       
+      addNotification({
+        title: 'Sucesso',
+        message: 'Carteira criada com sucesso!',
+        type: 'success'
+      });
+      
       fetchWallets();
       setNewWallet({ name: '', description: '', balance: 0 });
     } catch (error) {
       console.error('Erro ao criar carteira:', error);
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível criar a carteira',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -74,39 +117,55 @@ export default function Wallets() {
 
   const handleDeleteWallet = async (walletId: string) => {
     try {
-      // Excluindo carteira
-      
+      setIsSubmitting(true);
       const success = await deleteWallet(walletId);
       
       if (success) {
-        // Carteira excluída com sucesso
-        toast.success('Carteira excluída com sucesso!');
+        addNotification({
+          title: 'Sucesso',
+          message: 'Carteira excluída com sucesso!',
+          type: 'success'
+        });
         fetchWallets();
       } else {
-        // Erro ao excluir carteira
-        toast.error('Erro ao excluir carteira');
+        addNotification({
+          title: 'Erro',
+          message: 'Não foi possível excluir a carteira',
+          type: 'error'
+        });
       }
     } catch (error) {
-      // Erro ao excluir carteira
-      toast.error('Erro ao excluir carteira');
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível excluir a carteira',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleSaveWallet = async (wallet: Wallet) => {
     try {
-      // Salvando carteira
+      setIsSubmitting(true);
       
       if (wallet.id) {
         const updatedWallet = await updateWallet(wallet);
         
         if (updatedWallet) {
-          // Carteira atualizada com sucesso
-          toast.success('Carteira atualizada com sucesso!');
+          addNotification({
+            title: 'Sucesso',
+            message: 'Carteira atualizada com sucesso!',
+            type: 'success'
+          });
           fetchWallets();
           setSelectedWallet(null);
         } else {
-          // Erro ao atualizar carteira
-          toast.error('Erro ao atualizar carteira');
+          addNotification({
+            title: 'Erro',
+            message: 'Não foi possível atualizar a carteira',
+            type: 'error'
+          });
         }
       } else {
         const newWallet = await createWallet({
@@ -115,18 +174,29 @@ export default function Wallets() {
         });
         
         if (newWallet) {
-          // Carteira criada com sucesso
-          toast.success('Carteira criada com sucesso!');
+          addNotification({
+            title: 'Sucesso',
+            message: 'Carteira criada com sucesso!',
+            type: 'success'
+          });
           fetchWallets();
           setSelectedWallet(null);
         } else {
-          // Erro ao criar carteira
-          toast.error('Erro ao criar carteira');
+          addNotification({
+            title: 'Erro',
+            message: 'Não foi possível criar a carteira',
+            type: 'error'
+          });
         }
       }
     } catch (error) {
-      // Erro ao salvar carteira
-      toast.error('Erro ao salvar carteira');
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível salvar a carteira',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -141,10 +211,10 @@ export default function Wallets() {
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button>
+            <LoadingButton loading={isSubmitting}>
               <Plus className="mr-2 h-4 w-4" />
               Nova Carteira
-            </Button>
+            </LoadingButton>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -157,6 +227,7 @@ export default function Wallets() {
                   value={newWallet.name}
                   onChange={(e) => setNewWallet({ ...newWallet, name: e.target.value })}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="space-y-2">
@@ -164,6 +235,7 @@ export default function Wallets() {
                   placeholder="Descrição"
                   value={newWallet.description}
                   onChange={(e) => setNewWallet({ ...newWallet, description: e.target.value })}
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="space-y-2">
@@ -173,11 +245,17 @@ export default function Wallets() {
                   value={newWallet.balance}
                   onChange={(e) => setNewWallet({ ...newWallet, balance: parseFloat(e.target.value) })}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
-              <Button type="submit" className="w-full">
+              <LoadingButton
+                type="submit"
+                loading={isSubmitting}
+                loadingText="Criando carteira..."
+                className="w-full"
+              >
                 Criar Carteira
-              </Button>
+              </LoadingButton>
             </form>
           </DialogContent>
         </Dialog>
@@ -190,7 +268,16 @@ export default function Wallets() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {loading ? (
-          <p>Carregando carteiras...</p>
+          <div className="col-span-full flex items-center justify-center p-8">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="text-muted-foreground">Carregando carteiras...</p>
+            </div>
+          </div>
+        ) : wallets.length === 0 ? (
+          <div className="col-span-full text-center p-8">
+            <p className="text-muted-foreground">Você ainda não tem nenhuma carteira cadastrada.</p>
+          </div>
         ) : (
           wallets.map((wallet) => (
             <div

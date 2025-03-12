@@ -5,10 +5,33 @@ import { formatCurrency } from '@/lib/formatters';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 
+interface NotificationProps {
+  title: string;
+  message: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+}
+
 export function useNotifications() {
   const { transactions, updateFilters } = useTransactions();
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
+
+  const addNotification = ({ title, message, type }: NotificationProps) => {
+    switch (type) {
+      case 'success':
+        toast.success(message, { description: title });
+        break;
+      case 'error':
+        toast.error(message, { description: title });
+        break;
+      case 'warning':
+        toast.warning(message, { description: title });
+        break;
+      case 'info':
+        toast.info(message, { description: title });
+        break;
+    }
+  };
   
   useEffect(() => {
     // Só executar se o usuário estiver autenticado
@@ -65,4 +88,6 @@ export function useNotifications() {
       });
     }
   }, [transactions, navigate, updateFilters, auth?.user]);
+
+  return { addNotification };
 } 

@@ -43,7 +43,7 @@ export function Register() {
     try {
       setLoading(true);
       await signUp(email, password, name);
-      toast.success('Conta criada com sucesso! Verifique seu email para confirmar o cadastro.');
+      toast.success('Conta criada com sucesso! Você já pode fazer login.');
       navigate('/auth');
     } catch (error: any) {
       console.error('Erro no registro:', error);

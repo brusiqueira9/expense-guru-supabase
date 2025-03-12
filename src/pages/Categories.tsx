@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   Dialog,
@@ -22,8 +21,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Category {
   id: string;
@@ -35,8 +35,10 @@ interface Category {
 
 export default function Categories() {
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newCategory, setNewCategory] = useState<{
     name: string;
@@ -65,7 +67,11 @@ export default function Categories() {
       setCategories(data || []);
     } catch (error) {
       console.error('Erro ao buscar categorias:', error);
-      toast.error('Erro ao buscar categorias');
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível carregar suas categorias',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -73,12 +79,29 @@ export default function Categories() {
 
   async function handleCreateCategory(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    // Validações
+    if (!newCategory.name.trim()) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe o nome da categoria',
+        type: 'error'
+      });
+      return;
+    }
+
     try {
       if (!user?.id) {
-        toast.error('Usuário não autenticado');
+        addNotification({
+          title: 'Erro',
+          message: 'Usuário não autenticado',
+          type: 'error'
+        });
         return;
       }
 
+      setIsSubmitting(true);
       const { error } = await supabase
         .from('categories')
         .insert([{
@@ -88,20 +111,33 @@ export default function Categories() {
 
       if (error) throw error;
       
-      toast.success('Categoria criada com sucesso');
+      addNotification({
+        title: 'Sucesso',
+        message: 'Categoria criada com sucesso',
+        type: 'success'
+      });
       fetchCategories();
       setNewCategory({ name: '', description: '', type: 'expense' });
     } catch (error: any) {
       console.error('Erro ao criar categoria:', error);
-      toast.error('Erro ao criar categoria: ' + error.message);
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível criar a categoria',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleUpdateCategory(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
+
     try {
       if (!editingCategory) return;
 
+      setIsSubmitting(true);
       const { error } = await supabase
         .from('categories')
         .update({
@@ -113,17 +149,28 @@ export default function Categories() {
 
       if (error) throw error;
       
-      toast.success('Categoria atualizada com sucesso');
+      addNotification({
+        title: 'Sucesso',
+        message: 'Categoria atualizada com sucesso',
+        type: 'success'
+      });
       fetchCategories();
       setEditingCategory(null);
     } catch (error: any) {
       console.error('Erro ao atualizar categoria:', error);
-      toast.error('Erro ao atualizar categoria: ' + error.message);
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível atualizar a categoria',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleDeleteCategory(id: string) {
     try {
+      setIsSubmitting(true);
       const { error } = await supabase
         .from('categories')
         .delete()
@@ -131,11 +178,21 @@ export default function Categories() {
 
       if (error) throw error;
       
-      toast.success('Categoria excluída com sucesso');
+      addNotification({
+        title: 'Sucesso',
+        message: 'Categoria excluída com sucesso',
+        type: 'success'
+      });
       fetchCategories();
     } catch (error: any) {
       console.error('Erro ao excluir categoria:', error);
-      toast.error('Erro ao excluir categoria: ' + error.message);
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível excluir a categoria',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -150,10 +207,10 @@ export default function Categories() {
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button>
+            <LoadingButton loading={isSubmitting}>
               <Plus className="mr-2 h-4 w-4" />
               Nova Categoria
-            </Button>
+            </LoadingButton>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -166,6 +223,7 @@ export default function Categories() {
                   value={newCategory.name}
                   onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="space-y-2">
@@ -173,6 +231,7 @@ export default function Categories() {
                   placeholder="Descrição"
                   value={newCategory.description}
                   onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="space-y-2">
@@ -181,15 +240,21 @@ export default function Categories() {
                   value={newCategory.type}
                   onChange={(e) => setNewCategory({ ...newCategory, type: e.target.value as 'income' | 'expense' })}
                   required
+                  disabled={isSubmitting}
                   aria-label="Tipo de categoria"
                 >
                   <option value="expense">Despesa</option>
                   <option value="income">Receita</option>
                 </select>
               </div>
-              <Button type="submit">
+              <LoadingButton
+                type="submit"
+                loading={isSubmitting}
+                loadingText="Criando categoria..."
+                className="w-full"
+              >
                 Criar Categoria
-              </Button>
+              </LoadingButton>
             </form>
           </DialogContent>
         </Dialog>
@@ -207,6 +272,7 @@ export default function Categories() {
                 value={editingCategory?.name || ''}
                 onChange={(e) => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)}
                 required
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -214,6 +280,7 @@ export default function Categories() {
                 placeholder="Descrição"
                 value={editingCategory?.description || ''}
                 onChange={(e) => setEditingCategory(prev => prev ? { ...prev, description: e.target.value } : null)}
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -222,6 +289,7 @@ export default function Categories() {
                 value={editingCategory?.type || 'expense'}
                 onChange={(e) => setEditingCategory(prev => prev ? { ...prev, type: e.target.value as 'income' | 'expense' } : null)}
                 required
+                disabled={isSubmitting}
                 aria-label="Tipo de categoria"
               >
                 <option value="expense">Despesa</option>
@@ -229,12 +297,21 @@ export default function Categories() {
               </select>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setEditingCategory(null)}>
+              <LoadingButton
+                type="button"
+                variant="outline"
+                onClick={() => setEditingCategory(null)}
+                loading={isSubmitting}
+              >
                 Cancelar
-              </Button>
-              <Button type="submit">
+              </LoadingButton>
+              <LoadingButton
+                type="submit"
+                loading={isSubmitting}
+                loadingText="Salvando..."
+              >
                 Salvar
-              </Button>
+              </LoadingButton>
             </div>
           </form>
         </DialogContent>
@@ -242,62 +319,72 @@ export default function Categories() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {loading ? (
-          <p>Carregando categorias...</p>
+          <div className="col-span-full flex items-center justify-center p-8">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="text-muted-foreground">Carregando categorias...</p>
+            </div>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="col-span-full text-center p-8">
+            <p className="text-muted-foreground">Você ainda não tem nenhuma categoria cadastrada.</p>
+          </div>
         ) : (
           categories.map((category) => (
             <div
               key={category.id}
               className="p-6 bg-card rounded-lg shadow border group relative"
             >
-              <div className="absolute right-4 top-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setEditingCategory(category)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir Categoria</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja excluir a categoria "{category.name}"? Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDeleteCategory(category.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{category.name}</h3>
+                <div className="flex items-center gap-2">
+                  <LoadingButton
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setEditingCategory(category)}
+                    loading={isSubmitting}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </LoadingButton>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <LoadingButton
+                        size="icon"
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-600"
+                        loading={isSubmitting}
                       >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <Trash2 className="h-4 w-4" />
+                      </LoadingButton>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir categoria</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteCategory(category.id)}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
-              <h3 className={cn(
-                "text-lg font-semibold",
-                category.type === 'income' ? 'text-green-500' : 'text-red-500'
-              )}>{category.name}</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {category.description}
               </p>
               <div className="mt-4">
-                <span className={`text-xs font-medium ${
-                  category.type === 'income' ? 'text-income' : 'text-expense'
-                }`}>
+                <span className={cn(
+                  "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                  category.type === 'income' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                )}>
                   {category.type === 'income' ? 'Receita' : 'Despesa'}
                 </span>
               </div>

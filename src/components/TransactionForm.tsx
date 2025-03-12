@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES, PaymentStatus, RecurrenceType } from "@/types";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +9,8 @@ import { ArrowDownCircle, ArrowUpCircle, Calendar, CalendarClock, RefreshCw } fr
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface TransactionFormProps {
   onSubmit?: () => void;
@@ -18,6 +19,8 @@ interface TransactionFormProps {
 
 export function TransactionForm({ onSubmit, initialData }: TransactionFormProps) {
   const { addTransaction } = useTransactions();
+  const { addNotification } = useNotifications();
+  const [loading, setLoading] = useState(false);
   const [type, setType] = useState<TransactionType>(initialData?.type || 'expense');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [category, setCategory] = useState<TransactionCategory | ''>(initialData?.category || '');
@@ -31,43 +34,108 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
   const [recurrence, setRecurrence] = useState<RecurrenceType>(initialData?.recurrence || 'none');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(initialData?.recurrenceEndDate || '');
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     
-    if (!amount || !category || !date) return;
-    
-    const transaction: Omit<Transaction, "id"> = {
-      type,
-      amount: parseFloat(amount),
-      category: category as TransactionCategory,
-      date,
-      description: description || undefined,
-    };
-    
-    // Adicionar campos específicos para despesas
-    if (type === 'expense') {
-      transaction.paymentStatus = paymentStatus;
-      if (dueDate) transaction.dueDate = dueDate;
+    // Validações
+    if (!amount || isNaN(parseFloat(amount))) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe um valor válido',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (!category) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, selecione uma categoria',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (!date) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe a data',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (type === 'expense' && paymentStatus === 'scheduled' && !dueDate) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe a data de vencimento para pagamentos agendados',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (isRecurring && recurrence === 'none') {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, selecione a frequência da recorrência',
+        type: 'error'
+      });
+      return;
     }
     
-    // Adicionar campos de recorrência se aplicável
-    if (isRecurring && recurrence !== 'none') {
-      transaction.recurrence = recurrence;
-      if (recurrenceEndDate) transaction.recurrenceEndDate = recurrenceEndDate;
+    try {
+      setLoading(true);
+      
+      const transaction: Omit<Transaction, "id"> = {
+        type,
+        amount: parseFloat(amount),
+        category: category as TransactionCategory,
+        date,
+        description: description || undefined,
+      };
+      
+      // Adicionar campos específicos para despesas
+      if (type === 'expense') {
+        transaction.paymentStatus = paymentStatus;
+        if (dueDate) transaction.dueDate = dueDate;
+      }
+      
+      // Adicionar campos de recorrência se aplicável
+      if (isRecurring && recurrence !== 'none') {
+        transaction.recurrence = recurrence;
+        if (recurrenceEndDate) transaction.recurrenceEndDate = recurrenceEndDate;
+      }
+      
+      await addTransaction(transaction);
+      
+      addNotification({
+        title: 'Sucesso',
+        message: `${type === 'income' ? 'Receita' : 'Despesa'} registrada com sucesso!`,
+        type: 'success'
+      });
+      
+      if (onSubmit) onSubmit();
+      
+      // Limpar o formulário
+      setAmount('');
+      setCategory('');
+      setDescription('');
+      setDueDate('');
+      setRecurrence('none');
+      setRecurrenceEndDate('');
+      setIsRecurring(false);
+      
+    } catch (error) {
+      console.error('Erro ao registrar transação:', error);
+      addNotification({
+        title: 'Erro',
+        message: 'Ocorreu um erro ao registrar a transação. Tente novamente.',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    addTransaction(transaction);
-    
-    if (onSubmit) onSubmit();
-    
-    // Limpar o formulário
-    setAmount('');
-    setCategory('');
-    setDescription('');
-    setDueDate('');
-    setRecurrence('none');
-    setRecurrenceEndDate('');
-    setIsRecurring(false);
   };
   
   const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
@@ -78,7 +146,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
         <div>
           <Label htmlFor="type">Tipo</Label>
           <div className="flex mt-1 space-x-2">
-            <Button
+            <LoadingButton
               type="button"
               variant={type === 'expense' ? "default" : "outline"}
               className={cn(
@@ -86,11 +154,12 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
                 type === 'expense' ? "bg-red-500 hover:bg-red-600" : ""
               )}
               onClick={() => setType('expense')}
+              loading={loading}
             >
               <ArrowDownCircle className="h-4 w-4" />
               Despesa
-            </Button>
-            <Button
+            </LoadingButton>
+            <LoadingButton
               type="button"
               variant={type === 'income' ? "default" : "outline"}
               className={cn(
@@ -98,10 +167,11 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
                 type === 'income' ? "bg-green-500 hover:bg-green-600" : ""
               )}
               onClick={() => setType('income')}
+              loading={loading}
             >
               <ArrowUpCircle className="h-4 w-4" />
               Receita
-            </Button>
+            </LoadingButton>
           </div>
         </div>
         
@@ -117,6 +187,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
             onChange={(e) => setAmount(e.target.value)}
             required
             className="mt-1"
+            disabled={loading}
           />
         </div>
       </div>
@@ -127,6 +198,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
           value={category}
           onValueChange={(value) => setCategory(value as TransactionCategory)}
           required
+          disabled={loading}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecione uma categoria" />
@@ -150,6 +222,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
               onChange={(e) => setDate(e.target.value)}
               required
               className="mt-1"
+              disabled={loading}
             />
             <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
           </div>
@@ -165,6 +238,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="mt-1"
+                disabled={loading}
               />
               <CalendarClock className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
@@ -180,6 +254,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className="mt-1"
+          disabled={loading}
         />
       </div>
       
@@ -189,6 +264,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
           <Select
             value={paymentStatus}
             onValueChange={(value) => setPaymentStatus(value as PaymentStatus)}
+            disabled={loading}
           >
             <SelectTrigger>
               <SelectValue />
@@ -213,6 +289,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
             id="isRecurring"
             checked={isRecurring}
             onCheckedChange={setIsRecurring}
+            disabled={loading}
           />
         </div>
         
@@ -223,6 +300,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
               <Select
                 value={recurrence}
                 onValueChange={(value) => setRecurrence(value as RecurrenceType)}
+                disabled={loading}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -245,20 +323,23 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
                   value={recurrenceEndDate}
                   onChange={(e) => setRecurrenceEndDate(e.target.value)}
                   className="mt-1"
+                  disabled={loading}
                 />
                 <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Deixe em branco para recorrência sem data final
-              </p>
             </div>
           </div>
         )}
       </div>
       
-      <Button type="submit" className="w-full">
-        Salvar Transação
-      </Button>
+      <LoadingButton
+        type="submit"
+        loading={loading}
+        loadingText={`Registrando ${type === 'income' ? 'receita' : 'despesa'}...`}
+        className="w-full"
+      >
+        {`Registrar ${type === 'income' ? 'Receita' : 'Despesa'}`}
+      </LoadingButton>
     </form>
   );
 }

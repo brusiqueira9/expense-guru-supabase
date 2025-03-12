@@ -188,8 +188,11 @@ export default function Settings() {
 
       if (deleteError) throw deleteError;
 
-      // Depois deletar a conta
-      const { error } = await supabase.auth.admin.deleteUser(user?.id as string);
+      // Chamar a função Edge para deletar a conta
+      const { error } = await supabase.functions.invoke('delete-account', {
+        method: 'POST'
+      });
+
       if (error) throw error;
 
       await signOut();

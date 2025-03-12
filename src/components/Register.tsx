@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
-import { Eye, EyeOff, ArrowRight, Lock, Mail, User, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Lock, Mail, User } from 'lucide-react';
 import Logo from './Logo';
 import BackgroundAnimation from './BackgroundAnimation';
+import { LoadingButton } from './ui/loading-button';
+import { useNotifications } from '../hooks/useNotifications';
 
 export function Register() {
   const [name, setName] = useState('');
@@ -17,6 +18,7 @@ export function Register() {
   const [isInputFocused, setIsInputFocused] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signUp, session } = useAuth();
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     if (session) {
@@ -28,11 +30,79 @@ export function Register() {
     e.preventDefault();
     if (loading) return;
 
+    // Validações básicas
+    if (!name) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe seu nome',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (!email) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe seu email',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (!password) {
+      addNotification({
+        title: 'Campo obrigatório',
+        message: 'Por favor, informe sua senha',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Validação de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      addNotification({
+        title: 'Email inválido',
+        message: 'Por favor, informe um email válido',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Validação de senha
+    if (password.length < 6) {
+      addNotification({
+        title: 'Senha inválida',
+        message: 'A senha deve ter pelo menos 6 caracteres',
+        type: 'error'
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       await signUp(email, password, name);
+      addNotification({
+        title: 'Conta criada',
+        message: 'Verifique seu email para confirmar o cadastro',
+        type: 'success'
+      });
     } catch (error: any) {
       console.error('Erro no registro:', error);
+      let errorMessage = 'Ocorreu um erro ao criar sua conta';
+      
+      // Tratamento de erros específicos do Supabase
+      if (error.message.includes('already registered')) {
+        errorMessage = 'Este email já está cadastrado';
+      } else if (error.message.includes('weak password')) {
+        errorMessage = 'A senha é muito fraca. Use uma combinação de letras, números e símbolos';
+      }
+
+      addNotification({
+        title: 'Erro no cadastro',
+        message: errorMessage,
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -134,17 +204,15 @@ export function Register() {
               </div>
             </div>
 
-            <Button
+            <LoadingButton
               type="submit"
-              disabled={loading}
+              loading={loading}
+              loadingText="Criando conta..."
               className="w-full bg-black text-white hover:bg-gray-800 transition-all duration-300 group relative overflow-hidden"
             >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                {loading ? 'Processando...' : 'Criar conta'}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </span>
-              <span className="absolute inset-0 bg-gray-800 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
-            </Button>
+              Criar conta
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </LoadingButton>
 
             <div className="text-center">
               <button
