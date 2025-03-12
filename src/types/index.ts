@@ -30,6 +30,7 @@ export interface Transaction {
   recurrence?: RecurrenceType;
   recurrenceEndDate?: string;
   parentTransactionId?: string;
+  isnotificationread?: boolean;
 }
 
 export interface FinancialSummary {
