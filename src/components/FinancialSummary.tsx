@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { ArrowUp, ArrowDown, Wallet, AlertTriangle, Sparkles } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface FinancialSummaryProps {
   showTitle?: boolean;
@@ -159,14 +160,14 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
                 
                 <Progress 
                   value={budgetProgress} 
-                  className="h-2"
-                  indicatorClassName={
-                    budgetStatus === "good" 
-                      ? "bg-green-500" 
-                      : budgetStatus === "warning" 
-                        ? "bg-amber-500" 
-                        : "bg-red-500"
-                  }
+                  className={cn(
+                    "h-2",
+                    {
+                      "[&>div]:bg-green-500": budgetStatus === "good",
+                      "[&>div]:bg-amber-500": budgetStatus === "warning",
+                      "[&>div]:bg-red-500": budgetStatus === "danger"
+                    }
+                  )}
                 />
                 
                 <div className="text-xs text-muted-foreground flex items-center mt-2">
@@ -211,7 +212,7 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
                     summary.totalExpense 
                       ? (summary.totalPaidExpense / summary.totalExpense) * 100 
                       : 0
-                  } className="h-2 bg-muted" indicatorClassName="bg-green-500" />
+                  } className="h-2 bg-muted [&>div]:bg-green-500" />
                 </div>
                 
                 <div className="space-y-2">
@@ -223,7 +224,7 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
                     summary.totalExpense 
                       ? (summary.totalPendingExpense / summary.totalExpense) * 100 
                       : 0
-                  } className="h-2 bg-muted" indicatorClassName="bg-yellow-500" />
+                  } className="h-2 bg-muted [&>div]:bg-yellow-500" />
                 </div>
                 
                 <div className="space-y-2">
@@ -235,7 +236,7 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
                     summary.totalExpense 
                       ? (summary.totalScheduledExpense / summary.totalExpense) * 100 
                       : 0
-                  } className="h-2 bg-muted" indicatorClassName="bg-blue-500" />
+                  } className="h-2 bg-muted [&>div]:bg-blue-500" />
                 </div>
               </div>
             </CardContent>

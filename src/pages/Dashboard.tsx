@@ -1,7 +1,7 @@
 import React from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 import { 
   ArrowDownIcon, 
   ArrowUpIcon, 
@@ -427,7 +427,7 @@ export default function Dashboard() {
                         <div className="flex items-center text-sm text-muted-foreground">
                           <CalendarClockIcon className="mr-1 h-3.5 w-3.5" />
                           {expense.dueDate ? (
-                            <span>Vencimento: {new Date(expense.dueDate).toLocaleDateString('pt-BR')}</span>
+                            <span>Vencimento: {formatDate(expense.dueDate)}</span>
                           ) : (
                             <span>Sem data de vencimento</span>
                           )}

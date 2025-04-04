@@ -6,46 +6,60 @@ import { Transaction, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TransactionCard } from "@/components/TransactionCard";
 import { Button } from "@/components/ui/button";
+import { formatDateWithWeekday } from '@/lib/formatters';
 
 export function TransactionList() {
   const { 
+    transactions, 
     filteredTransactions, 
-    updateTransaction, 
     deleteTransaction, 
+    updateTransaction, 
     filters,
     clearFilters,
     currentMonthDisplay
   } = useTransactions();
   
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Transaction>>({});
+  const [editForm, setEditForm] = useState<any>({});
   const [loading, setLoading] = useState(false);
   
   const handleEdit = (transaction: Transaction) => {
     setEditingId(transaction.id);
     setEditForm({
-      type: transaction.type,
-      amount: transaction.amount,
+      amount: transaction.amount.toString(),
       category: transaction.category,
       date: transaction.date,
-      description: transaction.description,
-      paymentStatus: transaction.paymentStatus,
-      dueDate: transaction.dueDate,
-      recurrence: transaction.recurrence,
-      recurrenceEndDate: transaction.recurrenceEndDate,
+      description: transaction.description || '',
+      ...(transaction.type === 'expense' && {
+        dueDate: transaction.dueDate || '',
+        paymentStatus: transaction.paymentStatus || 'pending'
+      })
     });
   };
   
   const handleSave = async (id: string) => {
-    if (loading) return;
-    
-    setLoading(true);
     try {
-      await updateTransaction(id, editForm as Omit<Transaction, "id">);
+      setLoading(true);
+      
+      const transaction = transactions.find(t => t.id === id);
+      if (!transaction) return;
+      
+      const updatedTransaction = {
+        ...transaction,
+        amount: parseFloat(editForm.amount),
+        category: editForm.category,
+        date: editForm.date,
+        description: editForm.description,
+        ...(transaction.type === 'expense' && {
+          dueDate: editForm.dueDate,
+          paymentStatus: editForm.paymentStatus
+        })
+      };
+      
+      await updateTransaction(id, updatedTransaction);
       setEditingId(null);
-      setEditForm({});
-    } catch (err) {
-      console.error("Erro ao atualizar transação:", err);
+    } catch (error) {
+      console.error('Erro ao atualizar transação:', error);
     } finally {
       setLoading(false);
     }
@@ -74,14 +88,16 @@ export function TransactionList() {
     
     // Converter para array e ordenar por data (mais recente primeiro)
     return Array.from(grouped.entries())
-      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+      // Ordenar por data (do mais recente para o mais antigo)
+      .sort((a, b) => {
+        // Simples comparação de strings ISO (YYYY-MM-DD)
+        // Como todas as datas estão no mesmo formato, isso funciona para ordenação
+        return b[0].localeCompare(a[0]);
+      })
       .map(([date, transactions]) => ({
         date,
-        formattedDate: new Date(date).toLocaleDateString('pt-BR', { 
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'long'
-        }),
+        // Usar a nova função de formatação que não é afetada por fuso horário
+        formattedDate: formatDateWithWeekday(date),
         transactions
       }));
   }, [filteredTransactions]);

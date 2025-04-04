@@ -301,12 +301,17 @@ export function useNotifications() {
     // Só executar se o usuário estiver autenticado e as transações estiverem carregadas
     if (!auth?.user || loading || !notificationPreferences.showTransactionReminders) return;
 
-    // Verificar despesas que vencem nos próximos 3 dias
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Início do dia atual
+    // Obter data atual no formato ISO sem timezone (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
     
-    const threeDaysFromNow = new Date(today);
-    threeDaysFromNow.setDate(today.getDate() + 3); // 3 dias a partir de hoje
+    // Calcular 3 dias a partir de hoje usando manipulação de string ISO
+    const getDateInXDays = (dateStr: string, days: number) => {
+      const date = new Date(dateStr + 'T00:00:00');
+      date.setDate(date.getDate() + days);
+      return date.toISOString().split('T')[0];
+    };
+    
+    const threeDaysFromNow = getDateInXDays(today, 3);
     
     // Agrupar despesas por dia de vencimento
     const upcomingExpensesByDay = new Map<string, any[]>();
@@ -314,20 +319,26 @@ export function useNotifications() {
     transactions.forEach(t => {
       if (t.type !== 'expense' || !t.dueDate || t.paymentStatus === 'paid' || t.isnotificationread) return;
       
-      const dueDate = new Date(t.dueDate + 'T00:00:00');
+      // Usar string de data diretamente para comparação (formato YYYY-MM-DD)
+      const dueDate = t.dueDate;
       if (dueDate >= today && dueDate <= threeDaysFromNow) {
-        const dueDateStr = dueDate.toISOString().split('T')[0];
-        if (!upcomingExpensesByDay.has(dueDateStr)) {
-          upcomingExpensesByDay.set(dueDateStr, []);
+        if (!upcomingExpensesByDay.has(dueDate)) {
+          upcomingExpensesByDay.set(dueDate, []);
         }
-        upcomingExpensesByDay.get(dueDateStr)!.push(t);
+        upcomingExpensesByDay.get(dueDate)!.push(t);
       }
     });
 
     // Notificar por dia de vencimento
     upcomingExpensesByDay.forEach((expenses, dateStr) => {
-      const dueDate = new Date(dateStr + 'T00:00:00');
-      const daysUntilDue = Math.round((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      // Calcular dias até o vencimento como diferença entre strings de data
+      const getDaysBetween = (start: string, end: string) => {
+        const startDate = new Date(start + 'T00:00:00');
+        const endDate = new Date(end + 'T00:00:00');
+        return Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      };
+      
+      const daysUntilDue = getDaysBetween(today, dateStr);
       
       // Determinar a prioridade com base na proximidade do vencimento
       let priority: PriorityLevel = 'medium';
@@ -400,7 +411,7 @@ export function useNotifications() {
     
     // Verificar se já mostrou dica hoje
     const lastTipDate = localStorage.getItem(`last_tip_date:${auth.user.id}`);
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0]; // Formato ISO YYYY-MM-DD
     
     if (lastTipDate !== today) {
       // Array de dicas financeiras
@@ -439,7 +450,7 @@ export function useNotifications() {
           priority: 'low'
         });
         
-        // Registrar que mostrou dica hoje
+        // Registrar que mostrou dica hoje com data ISO
         localStorage.setItem(`last_tip_date:${auth?.user?.id}`, today);
       }, 10000);
     }

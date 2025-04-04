@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -19,7 +19,7 @@ import {
   Legend,
   TooltipProps,
 } from "recharts";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,6 +60,16 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
       ))}
     </div>
   );
+};
+
+// Adicionar função de formatação para meses abreviados e ano
+const formatMonthYear = (dateString: string) => {
+  // Usar Date apenas para extrair mês e ano, sem problemas de timezone
+  const date = new Date(dateString);
+  const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear().toString().substr(-2);
+  return `${month}/${year}`;
 };
 
 export default function Charts() {
@@ -156,7 +166,7 @@ export default function Charts() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([month, categories]) => {
         const result = {
-          month: new Date(month).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+          month: formatMonthYear(month)
         };
         
         allCategories.forEach(category => {

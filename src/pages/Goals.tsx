@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { PiggyBank, PlusCircle, Target, Trash2, Edit2 } from "lucide-react";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatDate } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import {
@@ -364,7 +364,7 @@ export default function Goals() {
                 <div>
                   <p className="text-sm text-muted-foreground">Prazo</p>
                   <p className="text-sm font-medium">
-                    {new Date(goal.deadline).toLocaleDateString('pt-BR')}
+                    {formatDate(goal.deadline)}
                     {" "}
                     <span className="text-muted-foreground">
                       ({calculateRemainingDays(goal.deadline)} dias restantes)

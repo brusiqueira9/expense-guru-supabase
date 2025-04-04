@@ -6,6 +6,7 @@ import { Transaction, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TransactionCard } from "@/components/TransactionCard";
 import { Button } from "@/components/ui/button";
+import { formatDateWithWeekday } from "@/lib/formatters";
 
 export function TransactionList() {
   const { 
@@ -74,14 +75,16 @@ export function TransactionList() {
     
     // Converter para array e ordenar por data (mais recente primeiro)
     return Array.from(grouped.entries())
-      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+      // Ordenar por data (do mais recente para o mais antigo)
+      .sort((a, b) => {
+        // Simples comparação de strings ISO (YYYY-MM-DD)
+        // Como todas as datas estão no mesmo formato, isso funciona para ordenação
+        return b[0].localeCompare(a[0]);
+      })
       .map(([date, transactions]) => ({
         date,
-        formattedDate: new Date(date).toLocaleDateString('pt-BR', { 
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'long'
-        }),
+        // Usar a nova função de formatação que não é afetada por fuso horário
+        formattedDate: formatDateWithWeekday(date),
         transactions
       }));
   }, [filteredTransactions]);
