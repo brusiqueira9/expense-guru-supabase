@@ -18,6 +18,8 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { Register } from "./pages/Register";
 import TestPage from "./pages/TestPage";
 import { useNotifications } from "./hooks/useNotifications";
+import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
+import { TipsAndHelp } from "./components/TipsAndHelp";
 
 // Install jsPDF and jspdf-autotable
 // <lov-add-dependency>jspdf@latest</lov-add-dependency>
@@ -85,6 +87,10 @@ function App() {
                 </Route>
               </Routes>
               <Toaster richColors position="top-right" />
+              {/* Componente de atalhos de teclado */}
+              <KeyboardShortcuts />
+              {/* Componente de dicas e tour guiado */}
+              <TipsAndHelp />
             </NotificationsProvider>
           </TransactionProvider>
         </ThemeProvider>

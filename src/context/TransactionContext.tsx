@@ -4,6 +4,8 @@ import { loadTransactions, saveTransactions, clearTransactions, migrateOldData }
 import { transactionService } from "@/lib/supabaseServices";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { format, parse, startOfMonth, endOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface TransactionContextType {
   transactions: Transaction[];
@@ -11,12 +13,16 @@ interface TransactionContextType {
   summary: FinancialSummary;
   dashboardSummary: FinancialSummary;
   filters: TransactionFilters;
+  currentMonth: Date;
+  setCurrentMonth: (date: Date) => void;
   addTransaction: (transaction: Omit<Transaction, "id">) => void;
   deleteTransaction: (id: string) => void;
   updateTransaction: (id: string, transaction: Omit<Transaction, "id">) => void;
   updateTransactionStatus: (id: string, paymentStatus: PaymentStatus) => void;
   updateFilters: (filters: TransactionFilters) => void;
   clearFilters: () => void;
+  setMonthFilter: (date: Date) => void;
+  currentMonthDisplay: string;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
@@ -158,6 +164,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [summary, setSummary] = useState<FinancialSummary>({
     totalIncome: 0,
     totalExpense: 0,
@@ -177,6 +184,22 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const { user } = useAuth();
+
+  // Calcular string para exibição do mês atual (ex: "Junho 2023")
+  const currentMonthDisplay = format(currentMonth, "MMMM yyyy", { locale: ptBR });
+
+  // Função para definir o filtro mensal
+  const setMonthFilter = (date: Date) => {
+    setCurrentMonth(date);
+    const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
+    
+    setFilters(prev => ({
+      ...prev,
+      startDate,
+      endDate
+    }));
+  };
 
   // Função para migrar dados do localStorage para o Supabase
   const migrateLocalStorageToSupabase = async (userId: string) => {
@@ -202,7 +225,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Carrega transações do Supabase quando o usuário muda
+  // Carregar transações e aplicar filtro mensal por padrão
   useEffect(() => {
     const fetchTransactions = async () => {
       if (user?.id) {
@@ -227,6 +250,10 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
             setTransactions(supabaseTransactions);
             toast.success("Dados carregados com sucesso!");
           }
+          
+          // Aplica filtro por mês atual por padrão
+          setMonthFilter(currentMonth);
+          
         } catch (error) {
           console.error("Erro ao carregar transações:", error);
           toast.error("Erro ao carregar transações do banco de dados");
@@ -616,12 +643,16 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         summary,
         dashboardSummary,
         filters,
+        currentMonth,
+        setCurrentMonth,
         addTransaction,
         deleteTransaction,
         updateTransaction,
         updateTransactionStatus,
         updateFilters,
         clearFilters,
+        setMonthFilter,
+        currentMonthDisplay,
       }}
     >
       {children}

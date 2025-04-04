@@ -21,6 +21,8 @@ import {
 } from "recharts";
 import { formatCurrency } from "@/lib/formatters";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const COLORS = [
   "#22c55e", // verde
@@ -94,7 +96,7 @@ export default function Charts() {
       .sort((a, b) => a.month.localeCompare(b.month))
       .map(data => ({
         ...data,
-        month: new Date(data.month).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+        month: format(new Date(data.month), "MMM/yy", { locale: ptBR })
       }));
   }, [transactions]);
 
@@ -225,13 +227,16 @@ export default function Charts() {
           </Card>
         </motion.div>
 
-        <motion.div {...CHART_ANIMATION} transition={{ delay: 0.2 }}>
+        <motion.div 
+          {...CHART_ANIMATION}
+          className="chart-container"
+        >
           <Card>
             <CardHeader>
               <CardTitle>Receitas vs Despesas</CardTitle>
-              <CardDescription>Compare suas receitas e despesas mensais</CardDescription>
+              <CardDescription>Comparação mensal de entradas e saídas</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-[300px]">
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData}>
@@ -404,6 +409,11 @@ export default function Charts() {
             </CardContent>
           </Card>
         </motion.div>
+      </div>
+
+      {/* Seletor de período para filtrar gráficos */}
+      <div className="period-selector flex justify-end items-center gap-2 mb-2">
+        <span className="text-sm text-muted-foreground">Período:</span>
       </div>
     </div>
   );

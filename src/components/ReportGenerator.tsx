@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { formatCurrency, formatDate } from "@/lib/formatters";
@@ -45,6 +44,9 @@ export function ReportGenerator() {
   const handleGeneratePDF = () => {
     // Create new document
     const doc = new jsPDF();
+    
+    // Configurar fonte que suporta caracteres acentuados (se necessário)
+    doc.setFont("helvetica");
     
     // Add title
     doc.setFontSize(20);

@@ -34,3 +34,24 @@ export const formatDate = (dateString: string) => {
 export const formatDateForInput = (dateString: string): string => {
   return dateString;
 };
+
+export const formatDateExtended = (dateString: string) => {
+  const [year, month, day] = dateString.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  
+  return date.toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+};
+
+export const formatDateShort = (dateString: string) => {
+  const [year, month, day] = dateString.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  
+  return date.toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'short'
+  });
+};

@@ -5,12 +5,46 @@ import { formatCurrency } from '@/lib/formatters';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 import { supabase } from '@/lib/supabase';
+import { BellIcon, XCircleIcon, CheckCircle2Icon, AlertCircleIcon, InfoIcon, CalendarDaysIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import * as React from 'react';
 
-interface NotificationProps {
+// Tipos de notificações
+export type NotificationType = 'success' | 'error' | 'warning' | 'info' | 'transaction' | 'goal' | 'reminder';
+
+// Níveis de prioridade
+export type PriorityLevel = 'high' | 'medium' | 'low';
+
+// Interface para histórico de notificações
+export interface NotificationItem {
+  id: string;
   title: string;
   message: string;
-  type: 'success' | 'error' | 'warning' | 'info';
+  type: NotificationType;
+  priority: PriorityLevel;
+  createdAt: Date;
+  isRead: boolean;
+  actionLabel?: string;
+  actionCallback?: () => void;
+  category?: string;
+  transactionId?: string;
+  relatedEntityId?: string;
+}
+
+// Interface de parâmetros para novas notificações
+export interface NotificationProps {
+  id?: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  priority?: PriorityLevel;
   isRead?: boolean;
+  actionLabel?: string;
+  actionCallback?: () => void;
+  category?: string;
+  transactionId?: string;
+  relatedEntityId?: string;
 }
 
 export function useNotifications() {
@@ -18,7 +52,59 @@ export function useNotifications() {
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
   const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
+  const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    showTransactionReminders: true,
+    showGoalUpdates: true,
+    showFinancialTips: true,
+    minPriority: 'low' as PriorityLevel
+  });
+
+  // Carregar notificações do localStorage ao iniciar
+  useEffect(() => {
+    if (auth?.user?.id) {
+      const storedNotifications = localStorage.getItem(`notifications:${auth.user.id}`);
+      if (storedNotifications) {
+        const parsed = JSON.parse(storedNotifications);
+        setNotificationHistory(parsed.map((n: any) => ({
+          ...n,
+          createdAt: new Date(n.createdAt)
+        })));
+      }
+
+      const storedPreferences = localStorage.getItem(`notification_preferences:${auth.user.id}`);
+      if (storedPreferences) {
+        setNotificationPreferences(JSON.parse(storedPreferences));
+      }
+      
+      const readNotificationIds = localStorage.getItem(`read_notifications:${auth.user.id}`);
+      if (readNotificationIds) {
+        setReadNotifications(new Set(JSON.parse(readNotificationIds)));
+      }
+    }
+  }, [auth?.user?.id]);
+
+  // Salvar notificações no localStorage quando mudarem
+  useEffect(() => {
+    if (auth?.user?.id && notificationHistory.length > 0) {
+      localStorage.setItem(`notifications:${auth.user.id}`, JSON.stringify(notificationHistory));
+    }
+  }, [notificationHistory, auth?.user?.id]);
+
+  // Salvar preferências de notificação
+  useEffect(() => {
+    if (auth?.user?.id) {
+      localStorage.setItem(`notification_preferences:${auth.user.id}`, JSON.stringify(notificationPreferences));
+    }
+  }, [notificationPreferences, auth?.user?.id]);
+
+  // Salvar ids de notificações lidas
+  useEffect(() => {
+    if (auth?.user?.id && readNotifications.size > 0) {
+      localStorage.setItem(`read_notifications:${auth.user.id}`, JSON.stringify(Array.from(readNotifications)));
+    }
+  }, [readNotifications, auth?.user?.id]);
 
   const markAsRead = (id: string) => {
     setReadNotifications(prev => {
@@ -26,27 +112,177 @@ export function useNotifications() {
       newSet.add(id);
       return newSet;
     });
+
+    // Atualizar também no histórico
+    setNotificationHistory(prev => 
+      prev.map(notification => 
+        notification.id === id ? { ...notification, isRead: true } : notification
+      )
+    );
   };
 
-  const addNotification = ({ title, message, type, isRead = false }: NotificationProps) => {
-    if (isRead || readNotifications.has(title)) return;
+  const markAllAsRead = () => {
+    // Marcar todas as notificações como lidas
+    const allIds = notificationHistory.map(n => n.id);
+    setReadNotifications(new Set(allIds));
+    
+    // Atualizar histórico
+    setNotificationHistory(prev => 
+      prev.map(notification => ({ ...notification, isRead: true }))
+    );
 
+    // Atualizar status de notificações de transações no banco
+    const transactionIds = notificationHistory
+      .filter(n => n.transactionId && !n.isRead)
+      .map(n => n.transactionId);
+    
+    if (transactionIds.length > 0) {
+      transactionIds.forEach(id => {
+        if (id) markNotificationAsRead(id);
+      });
+    }
+
+    toast.success("Todas as notificações foram marcadas como lidas");
+  };
+
+  const clearAllNotifications = () => {
+    setNotificationHistory([]);
+    if (auth?.user?.id) {
+      localStorage.removeItem(`notifications:${auth.user.id}`);
+    }
+    toast.success("Histórico de notificações limpo com sucesso");
+  };
+
+  const updateNotificationPreferences = (preferences: Partial<typeof notificationPreferences>) => {
+    setNotificationPreferences(prev => ({
+      ...prev,
+      ...preferences
+    }));
+    toast.success("Preferências de notificações atualizadas");
+  };
+
+  // Função para adicionar uma nova notificação
+  const addNotification = (props: NotificationProps) => {
+    const { 
+      id = crypto.randomUUID(), 
+      title, 
+      message, 
+      type, 
+      priority = 'medium', 
+      isRead = false,
+      actionLabel,
+      actionCallback,
+      category,
+      transactionId,
+      relatedEntityId
+    } = props;
+
+    // Verificar preferências do usuário
+    if (!notificationPreferences.showTransactionReminders && type === 'transaction') return;
+    if (!notificationPreferences.showGoalUpdates && type === 'goal') return;
+    if (!notificationPreferences.showFinancialTips && type === 'info') return;
+
+    // Verificar nível de prioridade mínimo
+    const priorityLevels: Record<PriorityLevel, number> = { high: 3, medium: 2, low: 1 };
+    if (priorityLevels[priority] < priorityLevels[notificationPreferences.minPriority]) return;
+
+    // Verificar se já foi lida
+    if (isRead || readNotifications.has(id)) return;
+
+    // Adicionar ao histórico
+    const newNotification: NotificationItem = {
+      id,
+      title,
+      message,
+      type,
+      priority,
+      createdAt: new Date(),
+      isRead,
+      actionLabel,
+      actionCallback,
+      category,
+      transactionId,
+      relatedEntityId
+    };
+
+    setNotificationHistory(prev => [newNotification, ...prev].slice(0, 50)); // Limitar a 50 notificações
+
+    // Criar conteúdo para o toast
+    const renderToastContent = () => {
+      // Em vez de usar JSX diretamente, criamos o conteúdo como texto formatado
+      let content = `<div style="text-align: left;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <strong>${title}</strong>
+          ${priority === 'high' ? '<span style="background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">Urgente</span>' : ''}
+        </div>
+        <p style="font-size: 0.875rem; white-space: pre-line; margin: 0;">${message}</p>
+      </div>`;
+      
+      return content;
+    };
+
+    // Configurar ações do toast
+    const toastActions: Record<string, any> = {
+      duration: priority === 'high' ? 10000 : 6000,
+    };
+
+    // Adicionar ação personalizada se fornecida
+    if (actionLabel && actionCallback) {
+      toastActions.action = {
+        label: actionLabel,
+        onClick: () => {
+          actionCallback();
+          markAsRead(id);
+        }
+      };
+    } else {
+      // Ação padrão para marcar como lida
+      toastActions.action = {
+        label: "Marcar como Lida",
+        onClick: () => markAsRead(id)
+      };
+    }
+
+    // Exibir toast com base no tipo
     switch (type) {
       case 'success':
-        toast.success(message, { description: title });
+        toast.success(title, {
+          description: message,
+          ...toastActions
+        });
         break;
       case 'error':
-        toast.error(message, { description: title });
+        toast.error(title, {
+          description: message,
+          ...toastActions
+        });
         break;
       case 'warning':
-        toast.warning(message, { description: title });
+        toast.warning(title, {
+          description: message,
+          ...toastActions
+        });
         break;
       case 'info':
-        toast.info(message, { description: title });
+      case 'goal':
+        toast.info(title, {
+          description: message,
+          ...toastActions
+        });
+        break;
+      case 'transaction':
+      case 'reminder':
+        toast.warning(title, {
+          description: message,
+          ...toastActions
+        });
         break;
     }
+
+    return id;
   };
   
+  // Função para marcar notificação de transação como lida no Supabase
   async function markNotificationAsRead(transactionId: string) {
     const { error } = await supabase
       .from('transactions')
@@ -60,9 +296,10 @@ export function useNotifications() {
     }
   }
 
+  // Verificar e notificar sobre despesas que vencem nos próximos dias
   useEffect(() => {
     // Só executar se o usuário estiver autenticado e as transações estiverem carregadas
-    if (!auth?.user || loading) return;
+    if (!auth?.user || loading || !notificationPreferences.showTransactionReminders) return;
 
     // Verificar despesas que vencem nos próximos 3 dias
     const today = new Date();
@@ -71,49 +308,84 @@ export function useNotifications() {
     const threeDaysFromNow = new Date(today);
     threeDaysFromNow.setDate(today.getDate() + 3); // 3 dias a partir de hoje
     
-    const upcomingExpenses = transactions.filter(t => {
-      if (t.type !== 'expense' || !t.dueDate || t.paymentStatus === 'paid' || t.isnotificationread) return false;
+    // Agrupar despesas por dia de vencimento
+    const upcomingExpensesByDay = new Map<string, any[]>();
+    
+    transactions.forEach(t => {
+      if (t.type !== 'expense' || !t.dueDate || t.paymentStatus === 'paid' || t.isnotificationread) return;
       
       const dueDate = new Date(t.dueDate + 'T00:00:00');
-      return dueDate >= today && dueDate <= threeDaysFromNow;
+      if (dueDate >= today && dueDate <= threeDaysFromNow) {
+        const dueDateStr = dueDate.toISOString().split('T')[0];
+        if (!upcomingExpensesByDay.has(dueDateStr)) {
+          upcomingExpensesByDay.set(dueDateStr, []);
+        }
+        upcomingExpensesByDay.get(dueDateStr)!.push(t);
+      }
     });
 
-    // Notificar o usuário sobre despesas próximas do vencimento
-    if (upcomingExpenses.length > 0) {
-      // Calcular o valor total das despesas próximas
-      const totalAmount = upcomingExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    // Notificar por dia de vencimento
+    upcomingExpensesByDay.forEach((expenses, dateStr) => {
+      const dueDate = new Date(dateStr + 'T00:00:00');
+      const daysUntilDue = Math.round((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       
-      // Criar mensagem de notificação
-      let message = `Você tem ${upcomingExpenses.length} despesa(s) vencendo nos próximos 3 dias.\n`;
-      message += `Valor total: ${formatCurrency(totalAmount)}\n\n`;
+      // Determinar a prioridade com base na proximidade do vencimento
+      let priority: PriorityLevel = 'medium';
+      if (daysUntilDue === 0) priority = 'high';
+      else if (daysUntilDue === 1) priority = 'medium';
+      else priority = 'low';
       
-      // Adicionar até 3 despesas na mensagem
-      upcomingExpenses.slice(0, 3).forEach(expense => {
-        message += `${expense.description || expense.category}: ${formatCurrency(expense.amount)}\n`;
-      });
+      const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
       
-      if (upcomingExpenses.length > 3) {
-        message += `...e mais ${upcomingExpenses.length - 3} despesa(s)`;
+      let title: string;
+      if (daysUntilDue === 0) {
+        title = `${expenses.length} despesa(s) vencem HOJE!`;
+      } else if (daysUntilDue === 1) {
+        title = `${expenses.length} despesa(s) vencem AMANHÃ!`;
+      } else {
+        title = `${expenses.length} despesa(s) vencem em ${daysUntilDue} dias`;
       }
       
-      // Mostrar notificação
-      toast.warning(message, {
-        duration: 8000, // Mostrar por 8 segundos
-        action: {
-          label: "Marcar como Lida",
-          onClick: () => {
-            // Marcar notificações como lidas
-            upcomingExpenses.forEach(expense => {
-              markNotificationAsRead(expense.id);
-              markAsRead(expense.description || expense.category);
-            });
-            // Recarregar a página após marcar como lida
-            window.location.reload();
-          }
-        }
+      // Criar mensagem de notificação com formatação melhorada
+      let message = `Valor total: ${formatCurrency(totalAmount)}\n\n`;
+      
+      // Adicionar todas as despesas na mensagem, limitando a 5
+      expenses.slice(0, 5).forEach(expense => {
+        message += `• ${expense.description || expense.category}: ${formatCurrency(expense.amount)}\n`;
       });
-    }
-  }, [transactions, navigate, updateFilters, auth?.user, readNotifications, loading]);
+      
+      if (expenses.length > 5) {
+        message += `\n...e mais ${expenses.length - 5} despesa(s)`;
+      }
+
+      // Tratar como uma única notificação agrupada com ID baseado na data
+      const notificationId = `upcoming-expenses-${dateStr}`;
+      
+      // Adicionar notificação com ação personalizada
+      addNotification({
+        id: notificationId,
+        title,
+        message,
+        type: 'transaction',
+        priority,
+        actionLabel: "Ver Despesas",
+        actionCallback: () => {
+          // Navegar para a página de transações e aplicar filtros
+          navigate('/transactions');
+          updateFilters({
+            type: 'expense',
+            paymentStatus: 'pending' // Corrigido para aceitar apenas um status
+          });
+          
+          // Marcar notificações como lidas
+          expenses.forEach(expense => {
+            markNotificationAsRead(expense.id);
+          });
+        },
+        transactionId: expenses[0].id // Referência ao primeiro ID para rastreamento
+      });
+    });
+  }, [transactions, navigate, updateFilters, auth?.user, readNotifications, loading, notificationPreferences]);
 
   // Atualizar o estado de carregamento quando as transações são carregadas
   useEffect(() => {
@@ -122,5 +394,65 @@ export function useNotifications() {
     }
   }, [transactions]);
 
-  return { addNotification, markAsRead };
+  // Adicionar dicas financeiras periódicas
+  useEffect(() => {
+    if (!auth?.user || !notificationPreferences.showFinancialTips) return;
+    
+    // Verificar se já mostrou dica hoje
+    const lastTipDate = localStorage.getItem(`last_tip_date:${auth.user.id}`);
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (lastTipDate !== today) {
+      // Array de dicas financeiras
+      const financialTips = [
+        {
+          title: "Regra 50/30/20",
+          message: "Tente alocar 50% da sua renda para necessidades, 30% para desejos e 20% para economias e investimentos."
+        },
+        {
+          title: "Fundo de Emergência",
+          message: "Procure manter um fundo de emergência equivalente a 3-6 meses de despesas para imprevistos."
+        },
+        {
+          title: "Revisão Mensal",
+          message: "Reserve um dia por mês para revisar suas finanças e ajustar seu orçamento conforme necessário."
+        },
+        {
+          title: "Automatize Suas Economias",
+          message: "Configure transferências automáticas para sua conta de investimentos logo após receber seu salário."
+        },
+        {
+          title: "Priorize Dívidas",
+          message: "Pague primeiro as dívidas com taxas de juros mais altas para economizar no longo prazo."
+        }
+      ];
+      
+      // Escolher uma dica aleatória
+      const randomTip = financialTips[Math.floor(Math.random() * financialTips.length)];
+      
+      // Mostrar a dica após 10 segundos (para não competir com outras notificações)
+      setTimeout(() => {
+        addNotification({
+          title: `Dica financeira: ${randomTip.title}`,
+          message: randomTip.message,
+          type: 'info',
+          priority: 'low'
+        });
+        
+        // Registrar que mostrou dica hoje
+        localStorage.setItem(`last_tip_date:${auth?.user?.id}`, today);
+      }, 10000);
+    }
+  }, [auth?.user, notificationPreferences]);
+
+  return { 
+    addNotification, 
+    markAsRead, 
+    markAllAsRead, 
+    clearAllNotifications, 
+    updateNotificationPreferences,
+    notificationHistory,
+    notificationPreferences,
+    unreadCount: notificationHistory.filter(n => !n.isRead).length
+  };
 } 
