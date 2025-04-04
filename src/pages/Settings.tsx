@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SettingsIcon, Lock, Palette, Trash2 } from "lucide-react";
+import { SettingsIcon, Lock, Palette, Trash2, LightbulbIcon, EyeOff, EyeIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 
 interface UserPreferences {
   id?: string;
@@ -21,6 +24,12 @@ interface UserPreferences {
   updated_at?: string;
 }
 
+interface TipsPreferences {
+  showTips: boolean;
+  showTour: boolean;
+  tipFrequency: 'high' | 'medium' | 'low' | 'off';
+}
+
 export default function Settings() {
   const { user, signOut } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -30,6 +39,12 @@ export default function Settings() {
     currency: "BRL",
     language: "pt-BR"
   });
+  const [tipsPreferences, setTipsPreferences] = useState<TipsPreferences>({
+    showTips: true,
+    showTour: true,
+    tipFrequency: 'medium'
+  });
+  const [dismissedTips, setDismissedTips] = useState<string[]>([]);
 
   // Aplicar tema quando as preferências mudarem
   useEffect(() => {
@@ -50,8 +65,56 @@ export default function Settings() {
   useEffect(() => {
     if (user?.id) {
       fetchUserPreferences();
+      loadTipsPreferences();
     }
   }, [user?.id]);
+
+  // Carregar preferências de dicas
+  const loadTipsPreferences = () => {
+    if (!user?.id) return;
+    
+    // Carregar preferências de dicas
+    const storedPreferences = localStorage.getItem(`tips_preferences:${user.id}`);
+    if (storedPreferences) {
+      setTipsPreferences(JSON.parse(storedPreferences));
+    }
+    
+    // Carregar dicas descartadas
+    const storedDismissedTips = localStorage.getItem(`dismissed_tips:${user.id}`);
+    if (storedDismissedTips) {
+      setDismissedTips(JSON.parse(storedDismissedTips));
+    }
+  };
+
+  // Salvar preferências de dicas
+  const saveTipsPreferences = (newPreferences: Partial<TipsPreferences>) => {
+    if (!user?.id) return;
+    
+    const updatedPreferences = {
+      ...tipsPreferences,
+      ...newPreferences
+    };
+    
+    setTipsPreferences(updatedPreferences);
+    localStorage.setItem(`tips_preferences:${user.id}`, JSON.stringify(updatedPreferences));
+    
+    toast.success(
+      newPreferences.showTips === false 
+        ? "Dicas desativadas com sucesso" 
+        : newPreferences.showTips === true 
+          ? "Dicas ativadas com sucesso"
+          : "Preferências de dicas atualizadas"
+    );
+  };
+
+  // Redefinir dicas descartadas
+  const resetDismissedTips = () => {
+    if (!user?.id) return;
+    
+    setDismissedTips([]);
+    localStorage.removeItem(`dismissed_tips:${user.id}`);
+    toast.success("Todas as dicas foram redefinidas");
+  };
 
   const fetchUserPreferences = async () => {
     try {
@@ -198,7 +261,8 @@ export default function Settings() {
       await signOut();
       toast.success('Conta excluída com sucesso');
     } catch (error: any) {
-      toast.error('Erro ao excluir conta: ' + error.message);
+      console.error('Erro completo:', error);
+      toast.error('Erro ao excluir conta: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }
@@ -206,241 +270,294 @@ export default function Settings() {
 
   const handleToggleDarkMode = async (checked: boolean) => {
     setPreferences(prev => ({ ...prev, dark_mode: checked }));
-    
-    // Se o usuário estiver logado, salvar a preferência automaticamente
-    if (user?.id) {
-      try {
-        // Primeiro, verificar se já existe um registro
-        const { data: existingData, error: fetchError } = await supabase
-          .from('user_preferences')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          throw fetchError;
-        }
-
-        let error;
-        if (existingData?.id) {
-          // Atualizar registro existente
-          const { error: updateError } = await supabase
-            .from('user_preferences')
-            .update({
-              dark_mode: checked,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingData.id);
-          error = updateError;
-        } else {
-          // Criar novo registro
-          const { error: insertError } = await supabase
-            .from('user_preferences')
-            .insert([{
-              user_id: user.id,
-              dark_mode: checked,
-              name: preferences.name,
-              currency: preferences.currency,
-              language: preferences.language,
-              updated_at: new Date().toISOString()
-            }]);
-          error = insertError;
-        }
-
-        if (error) throw error;
-      } catch (error) {
-        console.error('Erro ao salvar modo escuro:', error);
-        // Reverter a mudança em caso de erro
-        setPreferences(prev => ({ ...prev, dark_mode: !checked }));
-        toast.error('Erro ao salvar preferência de tema');
-      }
-    }
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
-        <p className="text-muted-foreground">
-          Gerencie suas preferências e configurações da conta
-        </p>
+    <div className="container max-w-4xl mx-auto py-6 space-y-8">
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold tracking-tight">Configurações</h2>
       </div>
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5" />
-              Perfil
-            </CardTitle>
-            <CardDescription>
-              Atualize suas informações pessoais
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={preferences.name}
-                onChange={(e) => setPreferences(prev => ({ ...prev, name: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={user?.email || ""}
-                disabled
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="profile">
+        <TabsList className="mb-6 grid grid-cols-4 max-w-lg">
+          <TabsTrigger value="profile">Perfil</TabsTrigger>
+          <TabsTrigger value="appearance">Aparência</TabsTrigger>
+          <TabsTrigger value="tips">Dicas</TabsTrigger>
+          <TabsTrigger value="security">Segurança</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              Aparência
-            </CardTitle>
-            <CardDescription>
-              Personalize a aparência do aplicativo
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Modo Escuro</Label>
-                <p className="text-sm text-muted-foreground">
-                  Ative o tema escuro do aplicativo
-                </p>
-              </div>
-              <Switch
-                checked={preferences.dark_mode}
-                onCheckedChange={handleToggleDarkMode}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Perfil</CardTitle>
+              <CardDescription>
+                Gerencie as informações do seu perfil e as preferências de conta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    value={preferences.name}
+                    onChange={(e) => setPreferences(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Idioma e Região</CardTitle>
-            <CardDescription>
-              Configure o idioma e a moeda do aplicativo
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currency">Moeda</Label>
-              <Select
-                value={preferences.currency}
-                onValueChange={(value) => setPreferences(prev => ({ ...prev, currency: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a moeda" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BRL">Real (R$)</SelectItem>
-                  <SelectItem value="USD">Dólar (US$)</SelectItem>
-                  <SelectItem value="EUR">Euro (€)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={user?.email || ""}
+                    disabled
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="language">Idioma</Label>
-              <Select
-                value={preferences.language}
-                onValueChange={(value) => setPreferences(prev => ({ ...prev, language: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o idioma" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="language">Idioma</Label>
+                  <Select
+                    value={preferences.language}
+                    onValueChange={(value) => setPreferences(prev => ({ ...prev, language: value }))}
+                  >
+                    <SelectTrigger id="language">
+                      <SelectValue placeholder="Selecione um idioma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                      <SelectItem value="en-US">English (US)</SelectItem>
+                      <SelectItem value="es">Español</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Segurança
-            </CardTitle>
-            <CardDescription>
-              Gerencie a segurança da sua conta
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="current-password">Senha Atual</Label>
-                <Input
-                  id="current-password"
-                  name="current-password"
-                  type="password"
-                  required
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Moeda</Label>
+                  <Select
+                    value={preferences.currency}
+                    onValueChange={(value) => setPreferences(prev => ({ ...prev, currency: value }))}
+                  >
+                    <SelectTrigger id="currency">
+                      <SelectValue placeholder="Selecione uma moeda" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BRL">Real Brasileiro (R$)</SelectItem>
+                      <SelectItem value="USD">US Dollar ($)</SelectItem>
+                      <SelectItem value="EUR">Euro (€)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-password">Nova Senha</Label>
-                <Input
-                  id="new-password"
-                  name="new-password"
-                  type="password"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
-                <Input
-                  id="confirm-password"
-                  name="confirm-password"
-                  type="password"
-                  required
-                />
-              </div>
-              <Button type="submit" disabled={loading}>
-                Atualizar Senha
+
+              <Button onClick={handleSaveSettings} disabled={loading}>
+                Salvar alterações
               </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card className="border-destructive">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
-              Excluir Conta
-            </CardTitle>
-            <CardDescription>
-              Exclua permanentemente sua conta e todos os seus dados
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={loading}
-            >
-              Excluir Conta
-            </Button>
-          </CardContent>
-        </Card>
+        <TabsContent value="appearance">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                <span>Aparência</span>
+              </CardTitle>
+              <CardDescription>
+                Personalize a aparência da aplicação.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="dark-mode">Modo Escuro</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Ative para usar o tema escuro
+                  </p>
+                </div>
+                <Switch
+                  id="dark-mode"
+                  checked={preferences.dark_mode}
+                  onCheckedChange={handleToggleDarkMode}
+                />
+              </div>
 
-        <div className="flex justify-end">
-          <Button onClick={handleSaveSettings} disabled={loading}>
-            {loading ? "Salvando..." : "Salvar Alterações"}
-          </Button>
-        </div>
-      </div>
+              <Button onClick={handleSaveSettings} disabled={loading}>
+                Salvar aparência
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tips">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LightbulbIcon className="h-5 w-5" />
+                <span>Dicas e Ajuda</span>
+              </CardTitle>
+              <CardDescription>
+                Personalize como você recebe dicas e ajuda no aplicativo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="show-tips">Dicas Contextuais</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receba dicas úteis enquanto usa o aplicativo
+                  </p>
+                </div>
+                <Switch
+                  id="show-tips"
+                  checked={tipsPreferences.showTips}
+                  onCheckedChange={(checked) => saveTipsPreferences({ showTips: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="show-tour">Tour Guiado para Novos Usuários</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Mostrar tour de boas-vindas para novos usuários
+                  </p>
+                </div>
+                <Switch
+                  id="show-tour"
+                  checked={tipsPreferences.showTour}
+                  onCheckedChange={(checked) => saveTipsPreferences({ showTour: checked })}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="tip-frequency">Frequência de Dicas</Label>
+                <RadioGroup 
+                  id="tip-frequency"
+                  value={tipsPreferences.tipFrequency}
+                  onValueChange={(value) => saveTipsPreferences({ 
+                    tipFrequency: value as 'high' | 'medium' | 'low' | 'off'
+                  })}
+                  className="flex flex-col space-y-1"
+                  disabled={!tipsPreferences.showTips}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="high" id="freq-high" />
+                    <Label htmlFor="freq-high" className="cursor-pointer flex items-center gap-2">
+                      Alta
+                      <Badge variant="outline" className="ml-2">Muitas dicas</Badge>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="medium" id="freq-medium" />
+                    <Label htmlFor="freq-medium" className="cursor-pointer flex items-center gap-2">
+                      Média
+                      <Badge variant="outline" className="ml-2">Equilibrado</Badge>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="low" id="freq-low" />
+                    <Label htmlFor="freq-low" className="cursor-pointer flex items-center gap-2">
+                      Baixa
+                      <Badge variant="outline" className="ml-2">Poucas dicas</Badge>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="off" id="freq-off" />
+                    <Label htmlFor="freq-off" className="cursor-pointer flex items-center gap-2">
+                      Desativada
+                      <Badge variant="outline" className="ml-2">Sem dicas</Badge>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <Button 
+                onClick={resetDismissedTips} 
+                variant="outline"
+                disabled={!dismissedTips.length}
+                className="mt-4"
+              >
+                Redefinir Dicas Descartadas
+                <Badge variant="secondary" className="ml-2">
+                  {dismissedTips.length}
+                </Badge>
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="security">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                <span>Segurança</span>
+              </CardTitle>
+              <CardDescription>
+                Atualize sua senha e gerencie as configurações de segurança.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">Senha Atual</Label>
+                  <Input
+                    id="current-password"
+                    name="current-password"
+                    type="password"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Nova Senha</Label>
+                  <Input
+                    id="new-password"
+                    name="new-password"
+                    type="password"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                  <Input
+                    id="confirm-password"
+                    name="confirm-password"
+                    type="password"
+                    required
+                  />
+                </div>
+
+                <Button type="submit" disabled={loading}>
+                  Atualizar Senha
+                </Button>
+              </form>
+
+              <div className="mt-8 pt-6 border-t">
+                <h3 className="font-medium text-lg text-red-500 flex items-center gap-2 mb-4">
+                  <Trash2 className="h-5 w-5" />
+                  Zona de Perigo
+                </h3>
+
+                <p className="text-sm text-muted-foreground mb-4">
+                  Ao excluir sua conta, todos os seus dados serão permanentemente removidos.
+                  Esta ação não pode ser desfeita.
+                </p>
+
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={loading}
+                >
+                  Excluir Conta
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 } 
