@@ -73,8 +73,6 @@ export default function Transactions() {
       
       <FinancialSummary />
       
-      <TransactionFiltersComponent />
-      
       <div className="grid grid-cols-1 gap-4">
         <div className="transaction-filters">
           <TransactionFiltersComponent />
