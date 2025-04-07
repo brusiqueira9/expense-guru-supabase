@@ -179,7 +179,7 @@ export function NotificationCenter() {
   const renderTriggerTitle = () => {
     return (
       <div className="relative">
-        <Bell className={`h-5 w-5 ${unreadCount > 0 ? 'text-yellow-500 animate-pulse' : ''}`} />
+        <Bell className={`h-5 w-5 ${unreadCount > 0 ? 'text-yellow-600 animate-pulse' : ''}`} />
         {unreadCount > 0 && (
           <Badge 
             className="absolute -top-2 -right-2 px-1 min-w-[18px] h-[18px] flex items-center justify-center" 
@@ -218,11 +218,11 @@ export function NotificationCenter() {
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         <Button 
-          variant={unreadCount > 0 ? "outline" : "ghost"} 
+          variant={unreadCount > 0 ? "secondary" : "ghost"} 
           size="icon" 
           title="Notificações" 
           aria-label="Abrir centro de notificações"
-          className={unreadCount > 0 ? "border-yellow-500 shadow-sm hover:bg-yellow-50 dark:hover:bg-yellow-950" : ""}
+          className={unreadCount > 0 ? "border border-yellow-500 text-foreground" : ""}
         >
           {renderTriggerTitle()}
         </Button>
