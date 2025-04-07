@@ -27,6 +27,10 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+// Importações necessárias para notificações
+import { useNotifications } from '@/hooks/useNotifications';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 // Tipos para os passos do tour
 interface TourStep {
@@ -319,7 +323,6 @@ export function TipsAndHelp() {
       setCurrentTourStep(prev => prev + 1);
     } else {
       endTour();
-      toast.success('Tour concluído! Agora você conhece os principais recursos.');
     }
   };
 
@@ -351,61 +354,51 @@ export function TipsAndHelp() {
     // Em vez de mostrar um toast, adicionar a dica ao centro de notificações
     if (!user?.id) return;
 
-    // Importar de forma dinâmica para evitar referência circular
-    import('@/hooks/useNotifications').then(({ useNotifications }) => {
-      // Criar um ID único para esta notificação baseado na dica
-      const notificationId = `tip-${tip.id}-${new Date().getTime()}`;
-      
-      // Acessar o contexto global de notificações
-      const context = require('@/App');
-      const authContext = React.useContext(context.AuthContext);
-      
-      if (!authContext?.user?.id) return;
-      
-      // Adicionar a dica como notificação
-      const notificationsHook = useNotifications();
-      notificationsHook.addNotification({
-        id: notificationId,
-        title: `Dica: ${tip.title}`,
-        message: tip.content,
-        type: 'info',
-        priority: 'low',
-        showToast: false,
-        actionLabel: tip.route ? "Ir para página" : undefined,
-        actionCallback: tip.route ? () => navigate(tip.route!) : undefined
-      });
-      
-      // Adicionar à lista de dicas descartadas
-      setDismissedTips(prev => [...prev, tip.id]);
-      localStorage.setItem(`dismissed_tips:${user.id}`, JSON.stringify([...dismissedTips, tip.id]));
+    // Usar o useNotifications de forma segura sem import dinâmico
+    // Importar o useNotifications hook no início do arquivo
+    const notificationsHook = useNotifications();
+    
+    // Criar um ID único para esta notificação baseado na dica
+    const notificationId = `tip-${tip.id}-${new Date().getTime()}`;
+    
+    // Adicionar a dica como notificação
+    notificationsHook.addNotification({
+      id: notificationId,
+      title: `Dica: ${tip.title}`,
+      message: tip.content,
+      type: 'info',
+      priority: 'low',
+      showToast: false,
+      actionLabel: tip.route ? "Ir para página" : undefined,
+      actionCallback: tip.route ? () => navigate(tip.route!) : undefined
     });
+    
+    // Adicionar à lista de dicas descartadas
+    setDismissedTips(prev => [...prev, tip.id]);
+    if (user?.id) {
+      localStorage.setItem(`dismissed_tips:${user.id}`, JSON.stringify([...dismissedTips, tip.id]));
+    }
   };
 
   // Mostrar oferta de tutorial
   const showTutorialOffer = () => {
-    toast(
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="text-blue-400 h-4 w-4" />
-          <span className="font-medium">Bem-vindo ao Expense Guru!</span>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Gostaria de fazer um tour rápido para conhecer as principais funcionalidades?
-        </p>
-      </div>,
-      {
-        duration: 10000,
-        action: {
-          label: "Iniciar Tour",
-          onClick: () => startTour()
-        },
-        cancel: {
-          label: "Talvez depois",
-          onClick: () => {}
-        }
-      }
-    );
+    setIsTutorialOfferOpen(true);
   };
+
+  // Mostrar menu de configurações de dicas
+  const showTipsSettings = () => {
+    setIsTipsSettingsOpen(true);
+  };
+
+  // Mostrar menu de ajuda
+  const showHelpMenu = () => {
+    setIsHelpMenuOpen(true);
+  };
+
+  // Estados para controlar a exibição de diálogos
+  const [isTutorialOfferOpen, setIsTutorialOfferOpen] = useState(false);
+  const [isTipsSettingsOpen, setIsTipsSettingsOpen] = useState(false);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
 
   // Mostrar o indicador de ajuda flutuante
   const HelpButton = () => {
@@ -428,156 +421,6 @@ export function TipsAndHelp() {
           {buttonIcon}
         </Button>
       </motion.div>
-    );
-  };
-
-  // Mostrar menu de configurações de dicas
-  const showTipsSettings = () => {
-    toast(
-      <Card className="w-full border-0 p-0">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Configurações de Dicas</CardTitle>
-          <CardDescription>Personalize como deseja receber ajuda e dicas</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pb-3">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="show-tips">Mostrar Dicas</Label>
-              <p className="text-sm text-muted-foreground">
-                Receba dicas contextuais enquanto usa o aplicativo
-              </p>
-            </div>
-            <Switch 
-              id="show-tips" 
-              checked={tipsPreferences.showTips}
-              onCheckedChange={(checked) => {
-                updateTipsPreferences({ showTips: checked });
-              }}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="show-tour">Tour Guiado para Novos Usuários</Label>
-              <p className="text-sm text-muted-foreground">
-                Oferecer tour guiado para novos usuários
-              </p>
-            </div>
-            <Switch 
-              id="show-tour" 
-              checked={tipsPreferences.showTour}
-              onCheckedChange={(checked) => {
-                updateTipsPreferences({ showTour: checked });
-              }}
-            />
-          </div>
-          
-          <div className="space-y-1.5">
-            <Label htmlFor="tip-frequency">Frequência de Dicas</Label>
-            <select 
-              id="tip-frequency"
-              className="w-full p-2 rounded-md border border-input bg-background text-sm"
-              value={tipsPreferences.tipFrequency}
-              onChange={(e) => {
-                updateTipsPreferences({ 
-                  tipFrequency: e.target.value as 'high' | 'medium' | 'low' | 'off'
-                });
-              }}
-              disabled={!tipsPreferences.showTips}
-            >
-              <option value="high">Alta - Muitas dicas</option>
-              <option value="medium">Média - Equilibrado</option>
-              <option value="low">Baixa - Poucas dicas</option>
-              <option value="off">Desativada</option>
-            </select>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between border-t pt-3">
-          <Button 
-            variant="outline" 
-            onClick={resetDismissedTips}
-            disabled={dismissedTips.length === 0}
-          >
-            Redefinir Dicas
-          </Button>
-          <Button onClick={() => toast.dismiss()}>
-            Salvar
-          </Button>
-        </CardFooter>
-      </Card>,
-      {
-        duration: Infinity,
-        position: 'bottom-right',
-        className: 'w-[350px] p-0'
-      }
-    );
-  };
-
-  // Mostrar menu de ajuda
-  const showHelpMenu = () => {
-    toast(
-      <div className="space-y-3 w-full">
-        <h4 className="font-medium text-lg">Precisa de ajuda?</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <Button 
-            variant="outline" 
-            className="flex flex-col items-center justify-center h-20 space-y-1"
-            onClick={() => startTour()}
-            disabled={!tipsPreferences.showTips}
-          >
-            <Users className="h-5 w-5" />
-            <span className="text-xs">Tour Guiado</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex flex-col items-center justify-center h-20 space-y-1"
-            onClick={() => {
-              const tip = getContextualTip();
-              if (tip) showQuickTip(tip);
-            }}
-            disabled={!tipsPreferences.showTips}
-          >
-            <LightbulbIcon className="h-5 w-5" />
-            <span className="text-xs">Dica Rápida</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex flex-col items-center justify-center h-20 space-y-1"
-            onClick={() => {
-              document.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
-            }}
-          >
-            <Info className="h-5 w-5" />
-            <span className="text-xs">Atalhos</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex flex-col items-center justify-center h-20 space-y-1"
-            onClick={() => showTipsSettings()}
-          >
-            <SettingsIcon className="h-5 w-5" />
-            <span className="text-xs">Configurações</span>
-          </Button>
-        </div>
-        <div className="flex justify-between items-center pt-2">
-          <Label htmlFor="toggle-tips" className="text-sm cursor-pointer">
-            {tipsPreferences.showTips ? "Desativar Dicas" : "Ativar Dicas"}
-          </Label>
-          <Switch 
-            id="toggle-tips" 
-            checked={tipsPreferences.showTips}
-            onCheckedChange={(checked) => {
-              updateTipsPreferences({ showTips: checked });
-              toast.dismiss();
-            }}
-          />
-        </div>
-      </div>,
-      {
-        duration: 10000,
-        position: 'bottom-right',
-        className: 'help-menu-toast'
-      }
     );
   };
 
@@ -645,6 +488,178 @@ export function TipsAndHelp() {
       </AnimatePresence>
       
       {!firstTimeUser && <HelpButton />}
+
+      {/* Oferta de tutorial */}
+      <Dialog open={isTutorialOfferOpen} onOpenChange={setIsTutorialOfferOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="text-blue-400 h-4 w-4" />
+              Bem-vindo ao Expense Guru!
+            </DialogTitle>
+            <DialogDescription>
+              Gostaria de fazer um tour rápido para conhecer as principais funcionalidades?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTutorialOfferOpen(false)}>
+              Talvez depois
+            </Button>
+            <Button onClick={() => {
+              startTour();
+              setIsTutorialOfferOpen(false);
+            }}>
+              Iniciar Tour
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Configurações de dicas */}
+      <Dialog open={isTipsSettingsOpen} onOpenChange={setIsTipsSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurações de Dicas</DialogTitle>
+            <DialogDescription>Personalize como deseja receber ajuda e dicas</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="show-tips">Mostrar Dicas</Label>
+                <p className="text-sm text-muted-foreground">
+                  Receba dicas contextuais enquanto usa o aplicativo
+                </p>
+              </div>
+              <Switch 
+                id="show-tips" 
+                checked={tipsPreferences.showTips}
+                onCheckedChange={(checked) => {
+                  updateTipsPreferences({ showTips: checked });
+                }}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="show-tour">Tour Guiado para Novos Usuários</Label>
+                <p className="text-sm text-muted-foreground">
+                  Oferecer tour guiado para novos usuários
+                </p>
+              </div>
+              <Switch 
+                id="show-tour" 
+                checked={tipsPreferences.showTour}
+                onCheckedChange={(checked) => {
+                  updateTipsPreferences({ showTour: checked });
+                }}
+              />
+            </div>
+            
+            <div className="space-y-1.5">
+              <Label htmlFor="tip-frequency">Frequência de Dicas</Label>
+              <select 
+                id="tip-frequency"
+                className="w-full p-2 rounded-md border border-input bg-background text-sm"
+                value={tipsPreferences.tipFrequency}
+                onChange={(e) => {
+                  updateTipsPreferences({ 
+                    tipFrequency: e.target.value as 'high' | 'medium' | 'low' | 'off'
+                  });
+                }}
+                disabled={!tipsPreferences.showTips}
+              >
+                <option value="high">Alta - Muitas dicas</option>
+                <option value="medium">Média - Equilibrado</option>
+                <option value="low">Baixa - Poucas dicas</option>
+                <option value="off">Desativada</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={resetDismissedTips}
+              disabled={dismissedTips.length === 0}
+            >
+              Redefinir Dicas
+            </Button>
+            <Button onClick={() => setIsTipsSettingsOpen(false)}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Menu de ajuda */}
+      <Popover open={isHelpMenuOpen} onOpenChange={setIsHelpMenuOpen}>
+        <PopoverContent className="w-80">
+          <div className="space-y-3 w-full">
+            <h4 className="font-medium text-lg">Precisa de ajuda?</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="outline" 
+                className="flex flex-col items-center justify-center h-20 space-y-1"
+                onClick={() => {
+                  startTour();
+                  setIsHelpMenuOpen(false);
+                }}
+                disabled={!tipsPreferences.showTips}
+              >
+                <Users className="h-5 w-5" />
+                <span className="text-xs">Tour Guiado</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex flex-col items-center justify-center h-20 space-y-1"
+                onClick={() => {
+                  const tip = getContextualTip();
+                  if (tip) showQuickTip(tip);
+                  setIsHelpMenuOpen(false);
+                }}
+                disabled={!tipsPreferences.showTips}
+              >
+                <LightbulbIcon className="h-5 w-5" />
+                <span className="text-xs">Dica Rápida</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex flex-col items-center justify-center h-20 space-y-1"
+                onClick={() => {
+                  document.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
+                  setIsHelpMenuOpen(false);
+                }}
+              >
+                <Info className="h-5 w-5" />
+                <span className="text-xs">Atalhos</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex flex-col items-center justify-center h-20 space-y-1"
+                onClick={() => {
+                  showTipsSettings();
+                  setIsHelpMenuOpen(false);
+                }}
+              >
+                <SettingsIcon className="h-5 w-5" />
+                <span className="text-xs">Configurações</span>
+              </Button>
+            </div>
+            <div className="flex justify-between items-center pt-2">
+              <Label htmlFor="toggle-tips" className="text-sm cursor-pointer">
+                {tipsPreferences.showTips ? "Desativar Dicas" : "Ativar Dicas"}
+              </Label>
+              <Switch 
+                id="toggle-tips" 
+                checked={tipsPreferences.showTips}
+                onCheckedChange={(checked) => {
+                  updateTipsPreferences({ showTips: checked });
+                  setIsHelpMenuOpen(false);
+                }}
+              />
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     </>
   );
 } 

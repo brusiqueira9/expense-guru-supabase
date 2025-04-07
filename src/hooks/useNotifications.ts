@@ -9,6 +9,7 @@ import { BellIcon, XCircleIcon, CheckCircle2Icon, AlertCircleIcon, InfoIcon, Cal
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import * as React from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 // Tipos de notificações
 export type NotificationType = 'success' | 'error' | 'warning' | 'info' | 'transaction' | 'goal' | 'reminder';
@@ -30,6 +31,7 @@ export interface NotificationItem {
   category?: string;
   transactionId?: string;
   relatedEntityId?: string;
+  userId?: string;
 }
 
 // Interface de parâmetros para novas notificações
@@ -62,6 +64,9 @@ export function useNotifications() {
     minPriority: 'low' as PriorityLevel,
     showToasts: false // Alterado para false para desativar notificações pop-up
   });
+
+  const { user } = useAuth();
+  const userId = user?.id;
 
   // Calcular contagem de notificações não lidas
   const unreadCount = notificationHistory.filter(n => !n.isRead).length;
@@ -204,7 +209,8 @@ export function useNotifications() {
       actionCallback,
       category,
       transactionId,
-      relatedEntityId
+      relatedEntityId,
+      userId
     };
 
     setNotificationHistory(prev => [newNotification, ...prev].slice(0, 50));
@@ -436,6 +442,9 @@ export function useNotifications() {
           type: 'transaction',
           priority: 'high',
           actionLabel: "Ver detalhes",
+          actionCallback: () => {
+            navigate('/transactions?filter=pending');
+          },
           showToast: false
         });
         
@@ -445,6 +454,9 @@ export function useNotifications() {
           type: 'goal',
           priority: 'medium',
           actionLabel: "Ver meta",
+          actionCallback: () => {
+            navigate('/goals');
+          },
           showToast: false
         });
         
@@ -454,7 +466,7 @@ export function useNotifications() {
         }
       }, 3000);
     }
-  }, [auth?.user]);
+  }, [auth?.user, navigate]);
 
   // Adicionar dicas financeiras periódicas
   useEffect(() => {
@@ -508,8 +520,105 @@ export function useNotifications() {
     }
   }, [auth?.user, notificationPreferences]);
 
+  // Função para verificar se uma transação ou meta pertence ao usuário atual
+  const belongsToCurrentUser = (item: any, userId: string | undefined) => {
+    if (!userId) return false;
+    return item.userId === userId || item.user_id === userId;
+  };
+
+  // Lógica para gerar notificações com base nos dados
+  const generateNotifications = () => {
+    const notifications: NotificationItem[] = [];
+    
+    // Notificações para transações recorrentes
+    transactions
+      .filter(transaction => belongsToCurrentUser(transaction, userId))
+      .filter(transaction => transaction.recurrence !== 'none')
+      .forEach(transaction => {
+        // ... existing code ...
+      });
+    
+    // Notificações para metas financeiras próximas ao vencimento
+    // goals
+    //   .filter(goal => belongsToCurrentUser(goal, userId))
+    //   .filter(goal => {
+    //     // ... existing code ...
+    //   })
+    //   .forEach(goal => {
+    //     // ... existing code ...
+    //   });
+    
+    // Notificações para despesas com vencimento próximo
+    transactions
+      .filter(transaction => belongsToCurrentUser(transaction, userId))
+      .filter(transaction => {
+        // ... existing code ...
+      })
+      .forEach(transaction => {
+        // ... existing code ...
+      });
+    
+    // Notificações para orçamentos próximos do limite
+    // budgets
+    //   .filter(budget => belongsToCurrentUser(budget, userId))
+    //   .forEach(budget => {
+    //     // ... existing code ...
+    //   });
+    
+    return notifications;
+  };
+
+  // Simula notificações para teste durante inicialização
+  const createTestNotifications = () => {
+    const notifications: NotificationItem[] = [];
+    
+    // Notificações para transações recorrentes
+    transactions
+      .filter(transaction => belongsToCurrentUser(transaction, userId))
+      .filter(transaction => transaction.recurrence !== 'none')
+      .forEach(transaction => {
+        // ... existing code ...
+      });
+    
+    // Notificações para metas financeiras próximas ao vencimento
+    // goals
+    //   .filter(goal => belongsToCurrentUser(goal, userId))
+    //   .filter(goal => {
+    //     // ... existing code ...
+    //   })
+    //   .forEach(goal => {
+    //     // ... existing code ...
+    //   });
+    
+    // Notificações para despesas com vencimento próximo
+    transactions
+      .filter(transaction => belongsToCurrentUser(transaction, userId))
+      .filter(transaction => {
+        // ... existing code ...
+      })
+      .forEach(transaction => {
+        // ... existing code ...
+      });
+    
+    // Notificações para orçamentos próximos do limite
+    // budgets
+    //   .filter(budget => belongsToCurrentUser(budget, userId))
+    //   .forEach(budget => {
+    //     // ... existing code ...
+    //   });
+    
+    return notifications;
+  };
+
+  // Filtra notificações para mostrar apenas as do usuário atual
+  const getNotificationsForCurrentUser = () => {
+    return notificationHistory.filter(notification => {
+      return notification.userId === userId;
+    });
+  };
+
   return {
-    notificationHistory,
+    notificationHistory: getNotificationsForCurrentUser(),
     markAsRead,
     markAllAsRead,
     clearAllNotifications,

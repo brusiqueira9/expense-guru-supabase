@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -8,38 +8,71 @@ interface ShortcutGuide {
   action: () => void;
 }
 
+// Exportando a função de mostrar ajuda para uso em outros componentes
+export const showKeyboardHelp = (shortcuts: ShortcutGuide[]) => {
+  const helpContent = shortcuts.map(s => 
+    `<div class="flex justify-between items-center py-2 border-b border-gray-100">
+      <kbd class="px-3 py-1.5 text-sm font-semibold bg-muted rounded-md shadow-sm border border-gray-300">${s.key}</kbd>
+      <span class="ml-4 text-sm font-medium">${s.description}</span>
+    </div>`
+  ).join('');
+
+  toast.info(
+    <div>
+      <h3 className="text-lg font-semibold mb-3 text-center border-b pb-2">Atalhos de Teclado</h3>
+      <div 
+        className="space-y-1 max-h-[70vh] overflow-y-auto pr-2" 
+        dangerouslySetInnerHTML={{ __html: helpContent }} 
+      />
+      <div className="mt-3 pt-2 border-t text-xs text-center text-muted-foreground">
+        Pressione <kbd className="px-1.5 py-0.5 rounded border border-gray-300 bg-muted text-xs">?</kbd> a qualquer momento para mostrar esta ajuda
+      </div>
+    </div>,
+    {
+      duration: 10000,
+      position: 'top-center',
+      className: 'keyboard-shortcuts-toast',
+      style: {
+        width: '400px',
+        maxWidth: '95vw',
+      }
+    }
+  );
+};
+
 export function KeyboardShortcuts() {
   const navigate = useNavigate();
-
+  const [keySequence, setKeySequence] = useState('');
+  
   // Lista de atalhos disponíveis
   const shortcuts: ShortcutGuide[] = [
     { 
-      key: 'g d', 
+      key: 'h', 
       description: 'Ir para Dashboard', 
-      action: () => navigate('/dashboard') 
+      action: () => navigate('/') 
     },
     { 
-      key: 'g t', 
+      key: 't', 
       description: 'Ir para Transações', 
       action: () => navigate('/transactions') 
     },
     { 
-      key: 'g c', 
-      description: 'Ir para Gráficos', 
-      action: () => navigate('/charts') 
+      key: 'c', 
+      description: 'Ir para Categorias', 
+      action: () => navigate('/categories') 
     },
     { 
-      key: 'g r', 
+      key: 'r', 
       description: 'Ir para Relatórios', 
       action: () => navigate('/reports') 
     },
     { 
-      key: 'g s', 
+      key: 's', 
       description: 'Ir para Configurações', 
       action: () => navigate('/settings') 
     },
     { 
-      key: 'n t', 
+      key: 'n', 
       description: 'Nova Transação', 
       action: () => navigate('/?tab=add') 
     },
@@ -55,38 +88,13 @@ export function KeyboardShortcuts() {
     },
   ];
 
-  // Estado para controlar a sequência de teclas pressionadas
-  let keySequence = '';
-  let keyTimer: ReturnType<typeof setTimeout>;
-
   const showHelp = () => {
-    const helpContent = shortcuts.map(s => 
-      `<div class="flex justify-between py-1">
-        <span class="font-mono bg-muted px-2 rounded">${s.key}</span>
-        <span class="ml-4">${s.description}</span>
-      </div>`
-    ).join('');
-
-    toast.info(
-      <div>
-        <h3 className="text-lg font-medium mb-2">Atalhos de Teclado</h3>
-        <div 
-          className="space-y-1 text-sm" 
-          dangerouslySetInnerHTML={{ __html: helpContent }} 
-        />
-      </div>,
-      {
-        duration: 8000,
-        position: 'top-center',
-        className: 'keyboard-shortcuts-toast',
-        style: {
-          width: '350px',
-        }
-      }
-    );
+    showKeyboardHelp(shortcuts);
   };
 
   useEffect(() => {
+    let keyTimer: ReturnType<typeof setTimeout>;
+
     // Manipulador de eventos de teclado
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignorar atalhos quando estiver em campos de entrada
@@ -105,37 +113,61 @@ export function KeyboardShortcuts() {
         return;
       }
 
+      // Para o caractere de interrogação
+      if (e.key === '?') {
+        e.preventDefault();
+        const shortcut = shortcuts.find(s => s.key === '?');
+        if (shortcut) shortcut.action();
+        return;
+      }
+
       // Para outras teclas, construa a sequência
       const key = e.key.toLowerCase();
       
       // Limpar timer anterior
       clearTimeout(keyTimer);
       
-      // Adicionar a tecla à sequência
-      keySequence += keySequence ? ' ' + key : key;
+      // Verificar primeiro se a tecla sozinha é um atalho
+      const singleKeyShortcut = shortcuts.find(s => 
+        s.key.toLowerCase() === key
+      );
       
-      // Verificar se a sequência corresponde a algum atalho
+      if (singleKeyShortcut) {
+        singleKeyShortcut.action();
+        setKeySequence('');
+        return;
+      }
+      
+      // Caso não seja, adicionar a tecla à sequência
+      const newSequence = keySequence ? keySequence + ' ' + key : key;
+      setKeySequence(newSequence);
+      
+      // Verificar se a nova sequência corresponde a algum atalho
       const matchingShortcut = shortcuts.find(s => 
-        s.key.toLowerCase() === keySequence
+        s.key.toLowerCase() === newSequence
       );
       
       if (matchingShortcut) {
         matchingShortcut.action();
-        keySequence = '';
+        setKeySequence('');
       } else {
         // Se não corresponder a nenhum atalho após 1 segundo, reiniciar a sequência
         keyTimer = setTimeout(() => {
-          keySequence = '';
+          setKeySequence('');
         }, 1000);
       }
     };
 
+    // Registrar o manipulador de eventos
     window.addEventListener('keydown', handleKeyDown);
     
+    // Limpar o manipulador de eventos ao desmontar o componente
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(keyTimer);
     };
-  }, []);
+  }, [keySequence, navigate]); // Adicionar dependências
 
-  return null; // Componente sem renderização
+  // Componente sem renderização visível
+  return null;
 } 
