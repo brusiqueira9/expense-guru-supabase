@@ -13,7 +13,6 @@ import Accounts from "./pages/Accounts";
 import Wallets from "./pages/Wallets";
 import { Auth } from "./components/Auth";
 import { useAuth } from "./hooks/useAuth";
-import { Toaster } from "sonner";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { Register } from "./pages/Register";
 import TestPage from "./pages/TestPage";
@@ -86,7 +85,6 @@ function App() {
                   <Route path="settings" element={<Settings />} />
                 </Route>
               </Routes>
-              <Toaster richColors position="top-right" />
               {/* Componente de atalhos de teclado */}
               <KeyboardShortcuts />
               {/* Componente de dicas e tour guiado */}

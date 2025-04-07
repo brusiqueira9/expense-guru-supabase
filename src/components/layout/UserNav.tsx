@@ -14,16 +14,19 @@ import {
   DropdownMenuSubContent,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings, HelpCircle, LightbulbIcon, Eye, EyeOff } from "lucide-react";
+import { LogOut, User, Settings, HelpCircle, LightbulbIcon, Eye, EyeOff, BellPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useState, useEffect } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { toast } from "sonner";
 
 export function UserNav() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [showTips, setShowTips] = useState(true);
+  const { createTestNotification } = useNotifications();
 
   // Carregar preferência de dicas do localStorage
   useEffect(() => {
@@ -61,10 +64,26 @@ export function UserNav() {
     navigate("/auth");
   };
 
+  // Função para criar notificação de teste
+  const handleCreateTestNotification = () => {
+    const result = createTestNotification();
+    toast.success("Notificação de teste criada!");
+  };
+
   return (
     <div className="flex items-center gap-4">
       {/* Centro de Notificações */}
       <NotificationCenter />
+      
+      {/* Botão de teste para notificações */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleCreateTestNotification}
+        title="Criar notificação de teste"
+      >
+        <BellPlus className="h-5 w-5" />
+      </Button>
       
       {/* Configurações */}
       <Button

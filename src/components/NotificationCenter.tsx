@@ -155,6 +155,7 @@ export function NotificationCenter() {
     unreadCount
   } = useNotifications();
 
+  const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'settings'>('all');
   const [showFilter, setShowFilter] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -178,7 +179,7 @@ export function NotificationCenter() {
   const renderTriggerTitle = () => {
     return (
       <div className="relative">
-        <Bell className="h-5 w-5" />
+        <Bell className={`h-5 w-5 ${unreadCount > 0 ? 'text-yellow-500 animate-pulse' : ''}`} />
         {unreadCount > 0 && (
           <Badge 
             className="absolute -top-2 -right-2 px-1 min-w-[18px] h-[18px] flex items-center justify-center" 
@@ -202,10 +203,27 @@ export function NotificationCenter() {
     { value: 'reminder', label: 'Lembretes' },
   ];
 
+  // Controlador de abertura e fechamento da folha de notificação
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    
+    // Ao abrir a folha, se estiver na aba de não lidas e não houver notificações não lidas,
+    // mudar para a aba "todas"
+    if (newOpen && activeTab === 'unread' && unreadCount === 0) {
+      setActiveTab('all');
+    }
+  };
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" title="Notificações" aria-label="Abrir centro de notificações">
+        <Button 
+          variant={unreadCount > 0 ? "outline" : "ghost"} 
+          size="icon" 
+          title="Notificações" 
+          aria-label="Abrir centro de notificações"
+          className={unreadCount > 0 ? "border-yellow-500 shadow-sm hover:bg-yellow-50 dark:hover:bg-yellow-950" : ""}
+        >
           {renderTriggerTitle()}
         </Button>
       </SheetTrigger>
@@ -225,7 +243,7 @@ export function NotificationCenter() {
           <div className="flex items-center justify-between mb-4">
             <TabsList>
               <TabsTrigger value="all">Todas</TabsTrigger>
-              <TabsTrigger value="unread">Não lidas</TabsTrigger>
+              <TabsTrigger value="unread" disabled={unreadCount === 0}>Não lidas</TabsTrigger>
               <TabsTrigger value="settings">Configurações</TabsTrigger>
             </TabsList>
 
@@ -256,14 +274,19 @@ export function NotificationCenter() {
                       <DropdownMenuSeparator />
                       {unreadCount > 0 && (
                         <DropdownMenuItem onClick={markAllAsRead}>
-                          <CheckSquare className="h-4 w-4 mr-2" />
-                          Marcar todas como lidas
+                          <CheckSquare className="mr-2 h-4 w-4" />
+                          <span>Marcar todas como lidas</span>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onClick={clearAllNotifications}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Limpar notificações
-                      </DropdownMenuItem>
+                      {notificationHistory.length > 0 && (
+                        <DropdownMenuItem 
+                          onClick={clearAllNotifications}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Limpar histórico</span>
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </>
@@ -272,180 +295,201 @@ export function NotificationCenter() {
           </div>
 
           {showFilter && (activeTab === 'all' || activeTab === 'unread') && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="mb-4 overflow-hidden"
-            >
-              <Card>
-                <CardHeader className="py-2">
-                  <CardTitle className="text-sm">Filtros</CardTitle>
-                </CardHeader>
-                <CardContent className="py-2">
-                  <div className="flex flex-wrap gap-2">
-                    {notificationTypes.map((type) => (
-                      <Badge
-                        key={type.value}
-                        variant={typeFilter === type.value ? 'default' : 'outline'}
-                        className="cursor-pointer"
-                        onClick={() => setTypeFilter(typeFilter === type.value ? null : type.value)}
-                      >
+            <Card className="mb-4">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm flex justify-between items-center">
+                  <span>Filtrar notificações</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7" 
+                    onClick={() => setShowFilter(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Select
+                  value={typeFilter || ""}
+                  onValueChange={(value) => setTypeFilter(value === "" ? null : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos os tipos</SelectItem>
+                    {notificationTypes.map(type => (
+                      <SelectItem key={type.value} value={type.value}>
                         {type.label}
-                      </Badge>
+                      </SelectItem>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
           )}
 
           <TabsContent value="all" className="m-0">
-            <ScrollArea className="h-[calc(100vh-150px)]">
+            <ScrollArea className="h-[calc(100vh-200px)]">
               {filteredNotifications.length > 0 ? (
-                <AnimatePresence>
-                  {filteredNotifications.map((notification) => (
-                    <NotificationCard 
-                      key={notification.id} 
-                      notification={notification} 
-                      onAction={() => handleAction(notification)}
-                    />
-                  ))}
-                </AnimatePresence>
+                <div className="space-y-2">
+                  <AnimatePresence initial={false}>
+                    {filteredNotifications.map(notification => (
+                      <NotificationCard
+                        key={notification.id}
+                        notification={notification}
+                        onAction={() => handleAction(notification)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                  <Bell className="h-12 w-12 mb-4 opacity-20" />
-                  <p>Não há notificações para exibir</p>
-                  <p className="text-sm">As notificações aparecerão aqui quando forem recebidas</p>
+                <div className="flex flex-col items-center justify-center h-40 text-center">
+                  <BellOff className="h-10 w-10 text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground text-sm">
+                    {typeFilter 
+                      ? 'Nenhuma notificação encontrada com este filtro'
+                      : 'Nenhuma notificação para exibir'}
+                  </p>
                 </div>
               )}
             </ScrollArea>
           </TabsContent>
 
           <TabsContent value="unread" className="m-0">
-            <ScrollArea className="h-[calc(100vh-150px)]">
+            <ScrollArea className="h-[calc(100vh-200px)]">
               {filteredNotifications.length > 0 ? (
-                <AnimatePresence>
-                  {filteredNotifications.map((notification) => (
-                    <NotificationCard 
-                      key={notification.id} 
-                      notification={notification} 
-                      onAction={() => handleAction(notification)}
-                    />
-                  ))}
-                </AnimatePresence>
+                <div className="space-y-2">
+                  <AnimatePresence initial={false}>
+                    {filteredNotifications.map(notification => (
+                      <NotificationCard
+                        key={notification.id}
+                        notification={notification}
+                        onAction={() => handleAction(notification)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                  <CheckCircle2 className="h-12 w-12 mb-4 opacity-20" />
-                  <p>Não há notificações não lidas</p>
-                  <p className="text-sm">Todas as suas notificações foram lidas</p>
+                <div className="flex flex-col items-center justify-center h-40 text-center">
+                  <CheckSquare className="h-10 w-10 text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground text-sm">
+                    Todas as notificações foram lidas
+                  </p>
                 </div>
               )}
             </ScrollArea>
           </TabsContent>
 
           <TabsContent value="settings" className="m-0">
-            <ScrollArea className="h-[calc(100vh-150px)]">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Preferências de Notificações</CardTitle>
-                  <CardDescription>
-                    Personalize como você deseja receber notificações
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="font-medium text-sm">Tipos de Notificações</h3>
-                    <Separator />
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="showTransactionReminders" 
-                        checked={notificationPreferences.showTransactionReminders}
-                        onCheckedChange={(checked) => {
-                          updateNotificationPreferences({ 
-                            showTransactionReminders: !!checked 
-                          });
-                        }}
-                      />
-                      <Label htmlFor="showTransactionReminders">
-                        Lembretes de transações e pagamentos
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Preferências de Notificações</CardTitle>
+                <CardDescription>
+                  Configure como você deseja receber as notificações
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="toast-notifications" 
+                      checked={notificationPreferences.showToasts}
+                      onCheckedChange={(checked) => updateNotificationPreferences({ 
+                        showToasts: checked === true 
+                      })}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label htmlFor="toast-notifications">
+                        Mostrar notificações pop-up (toasts)
                       </Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="showGoalUpdates" 
-                        checked={notificationPreferences.showGoalUpdates}
-                        onCheckedChange={(checked) => {
-                          updateNotificationPreferences({ 
-                            showGoalUpdates: !!checked 
-                          });
-                        }}
-                      />
-                      <Label htmlFor="showGoalUpdates">
-                        Atualizações sobre metas financeiras
-                      </Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="showFinancialTips" 
-                        checked={notificationPreferences.showFinancialTips}
-                        onCheckedChange={(checked) => {
-                          updateNotificationPreferences({ 
-                            showFinancialTips: !!checked 
-                          });
-                        }}
-                      />
-                      <Label htmlFor="showFinancialTips">
-                        Dicas financeiras e sugestões
-                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Exibe notificações emergentes na tela quando ocorrem eventos
+                      </p>
                     </div>
                   </div>
-                  
-                  <div className="space-y-2 pt-4">
-                    <h3 className="font-medium text-sm">Nível de Prioridade Mínimo</h3>
-                    <Separator />
-                    <p className="text-sm text-muted-foreground">
-                      Só receba notificações com o nível de prioridade selecionado ou superior
-                    </p>
+
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="transaction-notifications" 
+                      checked={notificationPreferences.showTransactionReminders}
+                      onCheckedChange={(checked) => updateNotificationPreferences({ 
+                        showTransactionReminders: checked === true 
+                      })}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label htmlFor="transaction-notifications">
+                        Lembretes de Transações
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Notificações sobre despesas a vencer e outros eventos de transações
+                      </p>
+                    </div>
                   </div>
-                  
+
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="goal-notifications" 
+                      checked={notificationPreferences.showGoalUpdates}
+                      onCheckedChange={(checked) => updateNotificationPreferences({ 
+                        showGoalUpdates: checked === true 
+                      })}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label htmlFor="goal-notifications">
+                        Atualizações de Metas
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receba notificações sobre o progresso de suas metas financeiras
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="tips-notifications" 
+                      checked={notificationPreferences.showFinancialTips}
+                      onCheckedChange={(checked) => updateNotificationPreferences({ 
+                        showFinancialTips: checked === true 
+                      })}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label htmlFor="tips-notifications">
+                        Dicas Financeiras
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receba dicas periódicas para melhorar sua saúde financeira
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="priority-level">Nível de Prioridade Mínimo</Label>
                   <Select 
                     value={notificationPreferences.minPriority}
-                    onValueChange={(value: PriorityLevel) => {
-                      updateNotificationPreferences({ minPriority: value });
-                    }}
+                    onValueChange={(value: PriorityLevel) => updateNotificationPreferences({ 
+                      minPriority: value 
+                    })}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione a prioridade mínima" />
+                    <SelectTrigger id="priority-level">
+                      <SelectValue placeholder="Selecione o nível mínimo de prioridade" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="low">Todas as Notificações (Baixa)</SelectItem>
-                      <SelectItem value="medium">Média e Alta</SelectItem>
-                      <SelectItem value="high">Apenas Urgentes (Alta)</SelectItem>
+                      <SelectItem value="high">Alta (apenas urgentes)</SelectItem>
+                      <SelectItem value="medium">Média (média e alta)</SelectItem>
+                      <SelectItem value="low">Baixa (todas)</SelectItem>
                     </SelectContent>
                   </Select>
-                  
-                </CardContent>
-                <CardFooter className="border-t pt-4 flex justify-end">
-                  <Button onClick={() => setActiveTab('all')}>
-                    Salvar e Voltar
-                  </Button>
-                </CardFooter>
-              </Card>
-            </ScrollArea>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Você só receberá notificações com prioridade igual ou superior à selecionada
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
-        
-        <SheetFooter className="mt-4">
-          <SheetClose asChild>
-            <Button variant="outline" className="w-full">Fechar</Button>
-          </SheetClose>
-        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

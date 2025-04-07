@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
 import { 
   X, 
   ChevronRight, 
@@ -337,14 +336,6 @@ export function TipsAndHelp() {
       ...prev,
       ...preferences
     }));
-    
-    toast.success(
-      preferences.showTips === false 
-        ? "Dicas desativadas com sucesso!" 
-        : preferences.showTips === true 
-          ? "Dicas ativadas com sucesso!"
-          : "Preferências de dicas atualizadas!"
-    );
   };
 
   // Limpar histórico de dicas descartadas
@@ -353,30 +344,41 @@ export function TipsAndHelp() {
     if (user?.id) {
       localStorage.removeItem(`dismissed_tips:${user.id}`);
     }
-    toast.success("Todas as dicas foram redefinidas!");
   };
 
   // Mostrar uma dica rápida
   const showQuickTip = (tip: Tip) => {
-    toast(
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <LightbulbIcon className="text-yellow-400 h-4 w-4" />
-          <span className="font-medium">{tip.title}</span>
-        </div>
-        <p className="text-sm text-muted-foreground">{tip.content}</p>
-      </div>,
-      {
-        duration: 6000,
-        action: {
-          label: "Não mostrar novamente",
-          onClick: () => {
-            setDismissedTips(prev => [...prev, tip.id]);
-            localStorage.setItem(`dismissed_tips:${user?.id}`, JSON.stringify([...dismissedTips, tip.id]));
-          }
-        }
-      }
-    );
+    // Em vez de mostrar um toast, adicionar a dica ao centro de notificações
+    if (!user?.id) return;
+
+    // Importar de forma dinâmica para evitar referência circular
+    import('@/hooks/useNotifications').then(({ useNotifications }) => {
+      // Criar um ID único para esta notificação baseado na dica
+      const notificationId = `tip-${tip.id}-${new Date().getTime()}`;
+      
+      // Acessar o contexto global de notificações
+      const context = require('@/App');
+      const authContext = React.useContext(context.AuthContext);
+      
+      if (!authContext?.user?.id) return;
+      
+      // Adicionar a dica como notificação
+      const notificationsHook = useNotifications();
+      notificationsHook.addNotification({
+        id: notificationId,
+        title: `Dica: ${tip.title}`,
+        message: tip.content,
+        type: 'info',
+        priority: 'low',
+        showToast: false,
+        actionLabel: tip.route ? "Ir para página" : undefined,
+        actionCallback: tip.route ? () => navigate(tip.route!) : undefined
+      });
+      
+      // Adicionar à lista de dicas descartadas
+      setDismissedTips(prev => [...prev, tip.id]);
+      localStorage.setItem(`dismissed_tips:${user.id}`, JSON.stringify([...dismissedTips, tip.id]));
+    });
   };
 
   // Mostrar oferta de tutorial

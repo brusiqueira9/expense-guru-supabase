@@ -1,26 +1,103 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { CalendarRange, X } from "lucide-react";
-import { Transaction, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
+import { CalendarRange, X, AlertCircle } from "lucide-react";
+import { Transaction, TransactionFilters, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TransactionCard } from "@/components/TransactionCard";
 import { Button } from "@/components/ui/button";
 import { formatDateWithWeekday } from "@/lib/formatters";
+import { Badge } from "@/components/ui/badge";
+import { AnimatePresence, motion } from "framer-motion";
 
-export function TransactionList() {
+interface TransactionListProps {
+  filter?: Partial<TransactionFilters> & {
+    upcomingOnly?: boolean;
+    recentOnly?: boolean;
+  };
+  emptyMessage?: string;
+}
+
+export function TransactionList({ 
+  filter = {}, 
+  emptyMessage = "Nenhuma transação encontrada" 
+}: TransactionListProps) {
   const { 
     filteredTransactions, 
     updateTransaction, 
     deleteTransaction, 
     filters,
     clearFilters,
-    currentMonthDisplay
+    currentMonthDisplay,
+    updateFilters
   } = useTransactions();
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Transaction>>({});
   const [loading, setLoading] = useState(false);
+  const [displayTransactions, setDisplayTransactions] = useState<Transaction[]>([]);
+
+  // Aplicar filtros adicionais com base nos props
+  useEffect(() => {
+    // Iniciar com as transações já filtradas pelo contexto global
+    let transactions = [...filteredTransactions];
+
+    // Aplicar filtros específicos desta instância
+    if (filter.type) {
+      transactions = transactions.filter(t => t.type === filter.type);
+    }
+
+    if (filter.paymentStatus) {
+      transactions = transactions.filter(t => t.paymentStatus === filter.paymentStatus);
+    }
+
+    if (filter.category) {
+      transactions = transactions.filter(t => t.category === filter.category);
+    }
+
+    // Filtro especial para transações próximas (vencendo em breve)
+    if (filter.upcomingOnly) {
+      const today = new Date();
+      const twoWeeksLater = new Date();
+      twoWeeksLater.setDate(twoWeeksLater.getDate() + 14);
+
+      transactions = transactions.filter(t => {
+        // Considerar apenas despesas não pagas
+        if (t.type !== 'expense' || t.paymentStatus === 'paid') return false;
+        
+        // Usar data de vencimento se disponível, senão usar data normal
+        const date = t.dueDate ? new Date(t.dueDate) : new Date(t.date);
+        
+        // Incluir se estiver entre hoje e duas semanas à frente
+        return date >= today && date <= twoWeeksLater;
+      });
+
+      // Ordenar por data de vencimento (mais próximas primeiro)
+      transactions.sort((a, b) => {
+        const dateA = a.dueDate ? new Date(a.dueDate) : new Date(a.date);
+        const dateB = b.dueDate ? new Date(b.dueDate) : new Date(b.date);
+        return dateA.getTime() - dateB.getTime();
+      });
+    }
+
+    // Filtro especial para transações recentes (últimos 7 dias)
+    if (filter.recentOnly) {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      transactions = transactions.filter(t => {
+        const txDate = new Date(t.date);
+        return txDate >= oneWeekAgo;
+      });
+
+      // Ordenar por data (mais recentes primeiro)
+      transactions.sort((a, b) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+    }
+
+    setDisplayTransactions(transactions);
+  }, [filteredTransactions, filter]);
   
   const handleEdit = (transaction: Transaction) => {
     setEditingId(transaction.id);
@@ -63,7 +140,7 @@ export function TransactionList() {
   const transactionsByDate = React.useMemo(() => {
     const grouped = new Map<string, Transaction[]>();
     
-    filteredTransactions.forEach(transaction => {
+    displayTransactions.forEach(transaction => {
       const date = transaction.date;
       
       if (!grouped.has(date)) {
@@ -87,24 +164,25 @@ export function TransactionList() {
         formattedDate: formatDateWithWeekday(date),
         transactions
       }));
-  }, [filteredTransactions]);
+  }, [displayTransactions]);
 
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
-        <h2 className="text-2xl font-semibold tracking-tight">Transações</h2>
-        
-        {hasActiveFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearFilters}
-            className="shrink-0 gap-2"
-          >
-            <X className="h-4 w-4" />
-            Limpar filtros
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            {filter.upcomingOnly && "Próximas Transações"}
+            {filter.recentOnly && "Transações Recentes"}
+            {filter.paymentStatus === 'pending' && "Transações Pendentes"}
+            {!filter.upcomingOnly && !filter.recentOnly && !filter.paymentStatus && "Transações"}
+          </h2>
+          {filter.upcomingOnly && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Próximas 2 semanas</Badge>
+          )}
+          {filter.recentOnly && (
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Últimos 7 dias</Badge>
+          )}
+        </div>
       </div>
       
       {loading && (
@@ -113,17 +191,14 @@ export function TransactionList() {
         </div>
       )}
       
-      {filteredTransactions.length === 0 ? (
+      {displayTransactions.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center">
             <div className="flex flex-col items-center gap-2">
-              <CalendarRange className="h-10 w-10 text-muted-foreground" />
+              <AlertCircle className="h-10 w-10 text-muted-foreground" />
               <h3 className="text-lg font-medium">Nenhuma transação encontrada</h3>
-              <p className="text-muted-foreground">
-                {filters.startDate || filters.endDate 
-                  ? `Não há transações no período selecionado.`
-                  : `Não há transações cadastradas.`
-                }
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {emptyMessage}
               </p>
             </div>
           </CardContent>
@@ -131,48 +206,62 @@ export function TransactionList() {
       ) : (
         <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
           <p className="text-muted-foreground mb-4">
-            Exibindo {filteredTransactions.length} transações {currentMonthDisplay && `em ${currentMonthDisplay}`}
+            Exibindo {displayTransactions.length} transações {currentMonthDisplay && `em ${currentMonthDisplay}`}
           </p>
           
-          {transactionsByDate.map(group => (
-            <div key={group.date} className="mb-6">
-              <div className="sticky top-0 bg-background z-10 py-2">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2 capitalize">
-                  {group.formattedDate}
-                </h3>
-              </div>
-              
-              <div className="space-y-4">
-                {group.transactions
-                  .sort((a, b) => {
-                    // Ordenar por tipo (receitas primeiro, depois despesas)
-                    if (a.type !== b.type) {
-                      return a.type === 'income' ? -1 : 1;
-                    }
-                    // Se for do mesmo tipo, ordenar por valor (maior primeiro)
-                    return b.amount - a.amount;
-                  })
-                  .map((transaction, index) => (
-                    <TransactionCard
-                      key={transaction.id}
-                      transaction={transaction}
-                      index={index}
-                      onEdit={handleEdit}
-                      onDelete={deleteTransaction}
-                      editingId={editingId}
-                      editForm={editForm}
-                      setEditForm={setEditForm}
-                      onSave={handleSave}
-                      onCancel={handleCancel}
-                      categories={transaction.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES}
-                    />
-                  ))
-                }
-              </div>
-            </div>
-          ))}
+          <AnimatePresence>
+            {transactionsByDate.map(group => (
+              <motion.div 
+                key={group.date} 
+                className="mb-6"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-2">
+                  <h3 className="text-sm font-medium text-muted-foreground px-3 py-1 rounded-md bg-muted/30 w-fit">
+                    {group.formattedDate}
+                  </h3>
+                </div>
+                
+                <div className="space-y-3 mt-2">
+                  {group.transactions
+                    .sort((a, b) => {
+                      // Para transações pendentes, mostrar primeiro as que têm data de vencimento próxima
+                      if (filter.paymentStatus === 'pending' && a.dueDate && b.dueDate) {
+                        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                      }
+                      
+                      // Ordenar por tipo (receitas primeiro, depois despesas)
+                      if (a.type !== b.type) {
+                        return a.type === 'income' ? -1 : 1;
+                      }
+                      // Se for do mesmo tipo, ordenar por valor (maior primeiro)
+                      return b.amount - a.amount;
+                    })
+                    .map((transaction, index) => (
+                      <TransactionCard
+                        key={transaction.id}
+                        transaction={transaction}
+                        index={index}
+                        onEdit={handleEdit}
+                        onDelete={deleteTransaction}
+                        editingId={editingId}
+                        editForm={editForm}
+                        setEditForm={setEditForm}
+                        onSave={handleSave}
+                        onCancel={handleCancel}
+                        categories={transaction.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES}
+                      />
+                    ))
+                  }
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>
   );
-} 
+}

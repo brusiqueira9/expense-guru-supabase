@@ -45,6 +45,7 @@ export interface NotificationProps {
   category?: string;
   transactionId?: string;
   relatedEntityId?: string;
+  showToast?: boolean; // Novo parâmetro para controlar exibição de toast
 }
 
 export function useNotifications() {
@@ -58,8 +59,12 @@ export function useNotifications() {
     showTransactionReminders: true,
     showGoalUpdates: true,
     showFinancialTips: true,
-    minPriority: 'low' as PriorityLevel
+    minPriority: 'low' as PriorityLevel,
+    showToasts: false // Alterado para false para desativar notificações pop-up
   });
+
+  // Calcular contagem de notificações não lidas
+  const unreadCount = notificationHistory.filter(n => !n.isRead).length;
 
   // Carregar notificações do localStorage ao iniciar
   useEffect(() => {
@@ -141,8 +146,6 @@ export function useNotifications() {
         if (id) markNotificationAsRead(id);
       });
     }
-
-    toast.success("Todas as notificações foram marcadas como lidas");
   };
 
   const clearAllNotifications = () => {
@@ -150,7 +153,6 @@ export function useNotifications() {
     if (auth?.user?.id) {
       localStorage.removeItem(`notifications:${auth.user.id}`);
     }
-    toast.success("Histórico de notificações limpo com sucesso");
   };
 
   const updateNotificationPreferences = (preferences: Partial<typeof notificationPreferences>) => {
@@ -158,7 +160,6 @@ export function useNotifications() {
       ...prev,
       ...preferences
     }));
-    toast.success("Preferências de notificações atualizadas");
   };
 
   // Função para adicionar uma nova notificação
@@ -174,7 +175,8 @@ export function useNotifications() {
       actionCallback,
       category,
       transactionId,
-      relatedEntityId
+      relatedEntityId,
+      showToast = false // Forçar para false, ignorando as preferências globais
     } = props;
 
     // Verificar preferências do usuário
@@ -205,78 +207,81 @@ export function useNotifications() {
       relatedEntityId
     };
 
-    setNotificationHistory(prev => [newNotification, ...prev].slice(0, 50)); // Limitar a 50 notificações
+    setNotificationHistory(prev => [newNotification, ...prev].slice(0, 50));
 
-    // Criar conteúdo para o toast
-    const renderToastContent = () => {
-      // Em vez de usar JSX diretamente, criamos o conteúdo como texto formatado
-      let content = `<div style="text-align: left;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-          <strong>${title}</strong>
-          ${priority === 'high' ? '<span style="background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">Urgente</span>' : ''}
-        </div>
-        <p style="font-size: 0.875rem; white-space: pre-line; margin: 0;">${message}</p>
-      </div>`;
-      
-      return content;
-    };
-
-    // Configurar ações do toast
-    const toastActions: Record<string, any> = {
-      duration: priority === 'high' ? 10000 : 6000,
-    };
-
-    // Adicionar ação personalizada se fornecida
-    if (actionLabel && actionCallback) {
-      toastActions.action = {
-        label: actionLabel,
-        onClick: () => {
-          actionCallback();
-          markAsRead(id);
-        }
+    // Exibir toast apenas se showToast for true
+    if (showToast) {
+      // Criar conteúdo para o toast
+      const renderToastContent = () => {
+        // Em vez de usar JSX diretamente, criamos o conteúdo como texto formatado
+        let content = `<div style="text-align: left;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <strong>${title}</strong>
+            ${priority === 'high' ? '<span style="background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">Urgente</span>' : ''}
+          </div>
+          <p style="font-size: 0.875rem; white-space: pre-line; margin: 0;">${message}</p>
+        </div>`;
+        
+        return content;
       };
-    } else {
-      // Ação padrão para marcar como lida
-      toastActions.action = {
-        label: "Marcar como Lida",
-        onClick: () => markAsRead(id)
-      };
-    }
 
-    // Exibir toast com base no tipo
-    switch (type) {
-      case 'success':
-        toast.success(title, {
-          description: message,
-          ...toastActions
-        });
-        break;
-      case 'error':
-        toast.error(title, {
-          description: message,
-          ...toastActions
-        });
-        break;
-      case 'warning':
-        toast.warning(title, {
-          description: message,
-          ...toastActions
-        });
-        break;
-      case 'info':
-      case 'goal':
-        toast.info(title, {
-          description: message,
-          ...toastActions
-        });
-        break;
-      case 'transaction':
-      case 'reminder':
-        toast.warning(title, {
-          description: message,
-          ...toastActions
-        });
-        break;
+      // Configurar ações do toast
+      const toastActions: Record<string, any> = {
+        duration: priority === 'high' ? 10000 : 6000,
+      };
+
+      // Adicionar ação personalizada se fornecida
+      if (actionLabel && actionCallback) {
+        toastActions.action = {
+          label: actionLabel,
+          onClick: () => {
+            actionCallback();
+            markAsRead(id);
+          }
+        };
+      } else {
+        // Ação padrão para marcar como lida
+        toastActions.action = {
+          label: "Marcar como Lida",
+          onClick: () => markAsRead(id)
+        };
+      }
+
+      // Exibir toast com base no tipo
+      switch (type) {
+        case 'success':
+          toast.success(title, {
+            description: message,
+            ...toastActions
+          });
+          break;
+        case 'error':
+          toast.error(title, {
+            description: message,
+            ...toastActions
+          });
+          break;
+        case 'warning':
+          toast.warning(title, {
+            description: message,
+            ...toastActions
+          });
+          break;
+        case 'info':
+        case 'goal':
+          toast.info(title, {
+            description: message,
+            ...toastActions
+          });
+          break;
+        case 'transaction':
+        case 'reminder':
+          toast.warning(title, {
+            description: message,
+            ...toastActions
+          });
+          break;
+      }
     }
 
     return id;
@@ -372,7 +377,7 @@ export function useNotifications() {
       // Tratar como uma única notificação agrupada com ID baseado na data
       const notificationId = `upcoming-expenses-${dateStr}`;
       
-      // Adicionar notificação com ação personalizada
+      // Adicionar notificação com ação personalizada, sem exibir toast
       addNotification({
         id: notificationId,
         title,
@@ -393,7 +398,8 @@ export function useNotifications() {
             markNotificationAsRead(expense.id);
           });
         },
-        transactionId: expenses[0].id // Referência ao primeiro ID para rastreamento
+        transactionId: expenses[0].id, // Referência ao primeiro ID para rastreamento
+        showToast: false // Não exibir toast automático
       });
     });
   }, [transactions, navigate, updateFilters, auth?.user, readNotifications, loading, notificationPreferences]);
@@ -404,6 +410,51 @@ export function useNotifications() {
       setLoading(false);
     }
   }, [transactions]);
+
+  // Adicionar algumas notificações de teste na inicialização
+  useEffect(() => {
+    if (!auth?.user) return;
+
+    // Verificar se já foram adicionadas notificações de teste
+    const notificationsAdded = localStorage.getItem(`test_notifications_added:${auth.user.id}`);
+    
+    if (!notificationsAdded) {
+      // Adicionar um atraso para garantir que as notificações apareçam após o login
+      setTimeout(() => {
+        // Adicionar algumas notificações de teste
+        addNotification({
+          title: "Bem-vindo ao Expense Guru!",
+          message: "Clique no ícone de sino para ver suas notificações e alertas financeiros.",
+          type: 'info',
+          priority: 'medium',
+          showToast: false
+        });
+        
+        addNotification({
+          title: "Despesa próxima do vencimento",
+          message: "Você tem uma fatura de cartão de crédito vencendo em 3 dias no valor de R$ 1.250,00.",
+          type: 'transaction',
+          priority: 'high',
+          actionLabel: "Ver detalhes",
+          showToast: false
+        });
+        
+        addNotification({
+          title: "Meta de economia próxima",
+          message: "Você já alcançou 80% da sua meta de economia para 'Férias'. Continue assim!",
+          type: 'goal',
+          priority: 'medium',
+          actionLabel: "Ver meta",
+          showToast: false
+        });
+        
+        // Marcar que as notificações de teste já foram adicionadas
+        if (auth?.user?.id) {
+          localStorage.setItem(`test_notifications_added:${auth.user.id}`, 'true');
+        }
+      }, 3000);
+    }
+  }, [auth?.user]);
 
   // Adicionar dicas financeiras periódicas
   useEffect(() => {
@@ -441,13 +492,14 @@ export function useNotifications() {
       // Escolher uma dica aleatória
       const randomTip = financialTips[Math.floor(Math.random() * financialTips.length)];
       
-      // Mostrar a dica após 10 segundos (para não competir com outras notificações)
+      // Adicionar dica como notificação, sem exibir toast
       setTimeout(() => {
         addNotification({
           title: `Dica financeira: ${randomTip.title}`,
           message: randomTip.message,
           type: 'info',
-          priority: 'low'
+          priority: 'low',
+          showToast: false // Não exibir toast automático
         });
         
         // Registrar que mostrou dica hoje com data ISO
@@ -456,14 +508,69 @@ export function useNotifications() {
     }
   }, [auth?.user, notificationPreferences]);
 
-  return { 
-    addNotification, 
-    markAsRead, 
-    markAllAsRead, 
-    clearAllNotifications, 
-    updateNotificationPreferences,
+  return {
     notificationHistory,
+    markAsRead,
+    markAllAsRead,
+    clearAllNotifications,
+    addNotification,
     notificationPreferences,
-    unreadCount: notificationHistory.filter(n => !n.isRead).length
+    updateNotificationPreferences,
+    unreadCount,
+    // Adicionar notificação de teste para demonstrar o funcionamento
+    createTestNotification: () => {
+      const notificationTypes: NotificationType[] = ['success', 'error', 'warning', 'info', 'transaction', 'goal', 'reminder'];
+      const priorityLevels: PriorityLevel[] = ['high', 'medium', 'low'];
+      
+      const randomType = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
+      const randomPriority = priorityLevels[Math.floor(Math.random() * priorityLevels.length)];
+      
+      const notifications = {
+        success: {
+          title: 'Operação bem-sucedida!',
+          message: 'Sua solicitação foi processada com sucesso.'
+        },
+        error: {
+          title: 'Erro ao processar',
+          message: 'Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.'
+        },
+        warning: {
+          title: 'Atenção!',
+          message: 'Algumas informações podem estar incompletas.'
+        },
+        info: {
+          title: 'Dica financeira',
+          message: 'Economize até 30% separando 10% do seu salário todo mês.'
+        },
+        transaction: {
+          title: 'Lembrete de transação',
+          message: 'Você tem uma despesa a vencer nos próximos dias.'
+        },
+        goal: {
+          title: 'Meta alcançada!',
+          message: 'Parabéns! Você alcançou 50% da sua meta de economia.'
+        },
+        reminder: {
+          title: 'Lembrete',
+          message: 'Não esqueça de verificar suas transações recentes.'
+        }
+      };
+      
+      const notification = notifications[randomType];
+      
+      const newNotification: NotificationProps = {
+        title: notification.title,
+        message: notification.message,
+        type: randomType,
+        priority: randomPriority,
+        actionLabel: 'Ver detalhes',
+        actionCallback: () => console.log('Ação da notificação de teste executada'),
+        showToast: false // Garantir que não seja exibido como toast
+      };
+      
+      addNotification(newNotification);
+      
+      return 'Notificação de teste criada e adicionada ao centro de notificações';
+    }
   };
 } 
