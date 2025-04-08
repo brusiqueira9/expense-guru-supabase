@@ -73,48 +73,56 @@ export function useNotifications() {
 
   // Carregar notificações do localStorage ao iniciar
   useEffect(() => {
-    if (auth?.user?.id) {
-      const storedNotifications = localStorage.getItem(`notifications:${auth.user.id}`);
+    if (userId) {
+      const storedNotifications = localStorage.getItem(`notifications:${userId}`);
       if (storedNotifications) {
         const parsed = JSON.parse(storedNotifications);
-        setNotificationHistory(parsed.map((n: any) => ({
+        // Filtra notificações para garantir que apenas as do usuário atual sejam carregadas
+        const userNotifications = parsed.filter((n: any) => !n.userId || n.userId === userId);
+        setNotificationHistory(userNotifications.map((n: any) => ({
           ...n,
-          createdAt: new Date(n.createdAt)
+          createdAt: new Date(n.createdAt),
+          userId: n.userId || userId // Garante que todas as notificações tenham userId
         })));
       }
 
-      const storedPreferences = localStorage.getItem(`notification_preferences:${auth.user.id}`);
+      const storedPreferences = localStorage.getItem(`notification_preferences:${userId}`);
       if (storedPreferences) {
         setNotificationPreferences(JSON.parse(storedPreferences));
       }
       
-      const readNotificationIds = localStorage.getItem(`read_notifications:${auth.user.id}`);
+      const readNotificationIds = localStorage.getItem(`read_notifications:${userId}`);
       if (readNotificationIds) {
         setReadNotifications(new Set(JSON.parse(readNotificationIds)));
       }
     }
-  }, [auth?.user?.id]);
+  }, [userId]);
 
   // Salvar notificações no localStorage quando mudarem
   useEffect(() => {
-    if (auth?.user?.id && notificationHistory.length > 0) {
-      localStorage.setItem(`notifications:${auth.user.id}`, JSON.stringify(notificationHistory));
+    if (userId && notificationHistory.length > 0) {
+      // Garantir que todas as notificações tenham o userId antes de salvar
+      const notificationsWithUserId = notificationHistory.map(notification => ({
+        ...notification,
+        userId: notification.userId || userId
+      }));
+      localStorage.setItem(`notifications:${userId}`, JSON.stringify(notificationsWithUserId));
     }
-  }, [notificationHistory, auth?.user?.id]);
+  }, [notificationHistory, userId]);
 
   // Salvar preferências de notificação
   useEffect(() => {
-    if (auth?.user?.id) {
-      localStorage.setItem(`notification_preferences:${auth.user.id}`, JSON.stringify(notificationPreferences));
+    if (userId) {
+      localStorage.setItem(`notification_preferences:${userId}`, JSON.stringify(notificationPreferences));
     }
-  }, [notificationPreferences, auth?.user?.id]);
+  }, [notificationPreferences, userId]);
 
   // Salvar ids de notificações lidas
   useEffect(() => {
-    if (auth?.user?.id && readNotifications.size > 0) {
-      localStorage.setItem(`read_notifications:${auth.user.id}`, JSON.stringify(Array.from(readNotifications)));
+    if (userId && readNotifications.size > 0) {
+      localStorage.setItem(`read_notifications:${userId}`, JSON.stringify(Array.from(readNotifications)));
     }
-  }, [readNotifications, auth?.user?.id]);
+  }, [readNotifications, userId]);
 
   const markAsRead = (id: string) => {
     setReadNotifications(prev => {
@@ -155,8 +163,8 @@ export function useNotifications() {
 
   const clearAllNotifications = () => {
     setNotificationHistory([]);
-    if (auth?.user?.id) {
-      localStorage.removeItem(`notifications:${auth.user.id}`);
+    if (userId) {
+      localStorage.removeItem(`notifications:${userId}`);
     }
   };
 
@@ -181,7 +189,7 @@ export function useNotifications() {
       category,
       transactionId,
       relatedEntityId,
-      showToast = false // Forçar para false, ignorando as preferências globais
+      showToast = false
     } = props;
 
     // Verificar preferências do usuário
@@ -196,7 +204,7 @@ export function useNotifications() {
     // Verificar se já foi lida
     if (isRead || readNotifications.has(id)) return;
 
-    // Adicionar ao histórico
+    // Garantir que a notificação tenha o ID do usuário atual
     const newNotification: NotificationItem = {
       id,
       title,
@@ -612,8 +620,10 @@ export function useNotifications() {
 
   // Filtra notificações para mostrar apenas as do usuário atual
   const getNotificationsForCurrentUser = () => {
+    if (!userId) return [];
     return notificationHistory.filter(notification => {
-      return notification.userId === userId;
+      // Se a notificação não tem userId definido OU se o userId corresponde ao usuário atual
+      return !notification.userId || notification.userId === userId;
     });
   };
 
@@ -625,7 +635,7 @@ export function useNotifications() {
     addNotification,
     notificationPreferences,
     updateNotificationPreferences,
-    unreadCount,
+    unreadCount: getNotificationsForCurrentUser().filter(n => !n.isRead).length, // Recalcular com base nas notificações filtradas
     // Adicionar notificação de teste para demonstrar o funcionamento
     createTestNotification: () => {
       const notificationTypes: NotificationType[] = ['success', 'error', 'warning', 'info', 'transaction', 'goal', 'reminder'];

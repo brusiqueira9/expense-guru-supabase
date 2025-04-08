@@ -27,6 +27,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button as UiButton } from "@/components/ui/button";
 
@@ -75,45 +76,17 @@ export function UserNav() {
     navigate("/auth");
   };
 
-  // Função para mostrar os atalhos - implementação totalmente independente
-  const showKeyboardShortcuts = () => {
-    // Lista direta de atalhos
-    const shortcuts = [
-      { key: 'h', description: 'Ir para Dashboard' },
-      { key: 't', description: 'Ir para Transações' },
-      { key: 'c', description: 'Ir para Categorias' },
-      { key: 'r', description: 'Ir para Relatórios' },
-      { key: 's', description: 'Ir para Configurações' },
-      { key: 'n', description: 'Nova Transação' },
-      { key: '?', description: 'Mostrar Ajuda' },
-      { key: 'Escape', description: 'Fechar pop-ups' }
-    ];
-    
-    // Solução correta usando o toast.message da biblioteca Sonner
-    toast.message(
-      <div>
-        <h3 className="text-lg font-semibold mb-3 text-center border-b pb-2">Atalhos de Teclado</h3>
-        <div className="mt-2 space-y-2 max-h-[70vh] overflow-y-auto">
-          {shortcuts.map((shortcut, index) => (
-            <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
-              <kbd className="px-3 py-1.5 text-sm font-semibold bg-muted rounded-md shadow-sm border border-gray-300">
-                {shortcut.key}
-              </kbd>
-              <span className="ml-4 text-sm font-medium">{shortcut.description}</span>
-            </div>
-          ))}
-          <div className="mt-3 pt-2 text-xs text-center text-muted-foreground">
-            Pressione <kbd className="px-1.5 py-0.5 rounded border border-gray-300 bg-muted text-xs">?</kbd> a qualquer momento
-          </div>
-        </div>
-      </div>,
-      {
-        duration: 10000,
-        position: "top-center",
-        className: "keyboard-shortcuts-toast w-[400px] max-w-[95vw]",
-      }
-    );
-  };
+  // Lista de atalhos do sistema
+  const shortcuts = [
+    { key: 'h', description: 'Ir para Dashboard' },
+    { key: 't', description: 'Ir para Transações' },
+    { key: 'c', description: 'Ir para Categorias' },
+    { key: 'r', description: 'Ir para Relatórios' },
+    { key: 's', description: 'Ir para Configurações' },
+    { key: 'n', description: 'Nova Transação' },
+    { key: '?', description: 'Mostrar Ajuda' },
+    { key: 'Escape', description: 'Fechar pop-ups' }
+  ];
 
   return (
     <div className="flex items-center gap-3">
@@ -141,12 +114,44 @@ export function UserNav() {
       <Button
         variant="ghost"
         size="icon"
-        onClick={showKeyboardShortcuts}
+        onClick={() => setShowHelpDialog(true)}
         title="Atalhos de Teclado"
         className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
       >
         <HelpCircle className="h-[18px] w-[18px]" />
       </Button>
+      
+      {/* Dialog de Ajuda com Atalhos */}
+      <Dialog open={showHelpDialog} onOpenChange={setShowHelpDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Atalhos de Teclado</DialogTitle>
+            <DialogDescription>
+              Utilize estes atalhos para navegar rapidamente no Expense Guru
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-1">
+            {shortcuts.map((shortcut, index) => (
+              <div key={index} className="flex items-center justify-between py-2 border-b">
+                <span className="text-sm font-medium">{shortcut.description}</span>
+                <kbd className="px-3 py-1.5 text-sm font-semibold bg-muted rounded-md shadow-sm border border-gray-300">
+                  {shortcut.key}
+                </kbd>
+              </div>
+            ))}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              onClick={() => setShowHelpDialog(false)}
+              className="w-full"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Menu do usuário */}
       <DropdownMenu>

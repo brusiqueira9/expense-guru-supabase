@@ -62,6 +62,7 @@ import { Separator } from '@/components/ui/separator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from "@/hooks/useAuth";
 
 // Componente de item de notificação
 const NotificationCard = ({ 
@@ -149,8 +150,8 @@ const NotificationCard = ({
                 className="text-xs h-7 px-3 rounded-full"
                 onClick={() => {
                   onMarkAsRead(notification.id);
-                  if (notification.actionUrl) {
-                    window.location.href = notification.actionUrl;
+                  if (notification.actionCallback) {
+                    notification.actionCallback();
                   }
                 }}
               >
@@ -196,6 +197,8 @@ export function NotificationCenter({
   const [filter, setFilter] = React.useState("all");
   const [expanded, setExpanded] = React.useState(false);
   
+  const { user } = useAuth();
+  
   // Filtrar notificações
   const filteredNotifications = React.useMemo(() => {
     if (filter === "all") return notificationHistory;
@@ -204,6 +207,13 @@ export function NotificationCenter({
     if (filter === "high") return notificationHistory.filter(n => n.priority === "high");
     return notificationHistory;
   }, [notificationHistory, filter]);
+  
+  // Filtrar notificações para mostrar apenas as do usuário atual
+  const userFilteredNotifications = React.useMemo(() => {
+    return filteredNotifications.filter(notification => 
+      !notification.userId || notification.userId === user?.id
+    );
+  }, [filteredNotifications, user]);
   
   if (!show) return null;
   
@@ -263,7 +273,7 @@ export function NotificationCenter({
         
         <ScrollArea className="max-h-[350px] pr-2 -mr-2">
           <AnimatePresence>
-            {filteredNotifications.length === 0 ? (
+            {userFilteredNotifications.length === 0 ? (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -280,7 +290,7 @@ export function NotificationCenter({
                 </p>
               </motion.div>
             ) : (
-              filteredNotifications.map((notification) => (
+              userFilteredNotifications.map((notification) => (
                 <NotificationCard 
                   key={notification.id} 
                   notification={notification}
@@ -313,15 +323,20 @@ export function NotificationCenter({
 }
 
 export function NotificationButton({ onClick }: { onClick: () => void }) {
-  const { notificationHistory } = useNotifications();
-  const unreadCount = notificationHistory.filter(n => !n.isRead).length;
-  const hasHighPriority = notificationHistory.some(n => !n.isRead && n.priority === 'high');
+  const { notificationHistory, unreadCount } = useNotifications();
+  const { user } = useAuth();
+
+  // Verificar se há notificações não lidas deste usuário
+  const userUnreadCount = notificationHistory
+    .filter(notification => !notification.userId || notification.userId === user?.id)
+    .filter(notification => !notification.isRead)
+    .length;
 
   return (
     <motion.div 
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      animate={hasHighPriority ? { 
+      animate={userUnreadCount > 0 ? { 
         scale: [1, 1.1, 1],
         transition: { 
           repeat: Infinity, 
@@ -331,28 +346,20 @@ export function NotificationButton({ onClick }: { onClick: () => void }) {
       } : {}}
     >
       <Button
-        variant={unreadCount > 0 ? "default" : "secondary"}
+        variant="ghost"
         size="icon"
-        className={`relative shadow-md ${
-          hasHighPriority 
-            ? 'bg-red-500 hover:bg-red-600 text-white' 
-            : unreadCount > 0 
-              ? 'bg-primary text-primary-foreground' 
-              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-        } rounded-full h-9 w-9 transition-all duration-200`}
         onClick={onClick}
+        title="Notificações"
+        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors relative"
       >
         <Bell className="h-[18px] w-[18px]" />
-        {unreadCount > 0 && (
-          <motion.span 
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`absolute -top-1 -right-1 ${
-              hasHighPriority ? 'bg-red-600' : 'bg-red-500'
-            } text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-background`}
+        {userUnreadCount > 0 && (
+          <Badge
+            variant="destructive"
+            className="h-4 min-w-4 p-0 flex items-center justify-center absolute -top-0.5 -right-0.5 text-[10px]"
           >
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </motion.span>
+            {userUnreadCount > 9 ? "9+" : userUnreadCount}
+          </Badge>
         )}
       </Button>
     </motion.div>
