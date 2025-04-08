@@ -185,8 +185,8 @@ export function NotificationCenter({
 }) {
   const { 
     notificationHistory, 
-    markAsRead,
-    markAllAsRead,
+    markAsRead: originalMarkAsRead,
+    markAllAsRead: originalMarkAllAsRead,
     clearAllNotifications,
     notificationPreferences,
     updateNotificationPreferences
@@ -196,17 +196,47 @@ export function NotificationCenter({
   
   const [filter, setFilter] = React.useState("all");
   const [expanded, setExpanded] = React.useState(false);
+  const [localNotifications, setLocalNotifications] = useState(notificationHistory);
   
   const { user } = useAuth();
+
+  // Atualizar notificações locais quando as notificações do hook mudarem
+  React.useEffect(() => {
+    setLocalNotifications(notificationHistory);
+  }, [notificationHistory]);
   
-  // Filtrar notificações
+  // Sobrescrever a função markAsRead para atualizar o estado local
+  const markAsRead = (id: string) => {
+    // Chamar a função original do hook
+    originalMarkAsRead(id);
+    
+    // Atualizar o estado local imediatamente
+    setLocalNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id ? { ...notification, isRead: true } : notification
+      )
+    );
+  };
+  
+  // Sobrescrever a função markAllAsRead
+  const markAllAsRead = () => {
+    // Chamar a função original do hook
+    originalMarkAllAsRead();
+    
+    // Atualizar o estado local imediatamente
+    setLocalNotifications(prev => 
+      prev.map(notification => ({ ...notification, isRead: true }))
+    );
+  };
+  
+  // Filtrar notificações (agora usando o estado local)
   const filteredNotifications = React.useMemo(() => {
-    if (filter === "all") return notificationHistory;
-    if (filter === "unread") return notificationHistory.filter(n => !n.isRead);
-    if (filter === "read") return notificationHistory.filter(n => n.isRead);
-    if (filter === "high") return notificationHistory.filter(n => n.priority === "high");
-    return notificationHistory;
-  }, [notificationHistory, filter]);
+    if (filter === "all") return localNotifications;
+    if (filter === "unread") return localNotifications.filter(n => !n.isRead);
+    if (filter === "read") return localNotifications.filter(n => n.isRead);
+    if (filter === "high") return localNotifications.filter(n => n.priority === "high");
+    return localNotifications;
+  }, [localNotifications, filter]);
   
   // Filtrar notificações para mostrar apenas as do usuário atual
   const userFilteredNotifications = React.useMemo(() => {
@@ -323,8 +353,24 @@ export function NotificationCenter({
 }
 
 export function NotificationButton({ onClick }: { onClick: () => void }) {
-  const { notificationHistory, unreadCount } = useNotifications();
+  const { notificationHistory, markAsRead, markAllAsRead } = useNotifications();
   const { user } = useAuth();
+  // Estado local para controlar a animação
+  const [animating, setAnimating] = useState(false);
+
+  // Efeito para iniciar animação quando o contador muda
+  React.useEffect(() => {
+    const count = notificationHistory
+      .filter(notification => !notification.userId || notification.userId === user?.id)
+      .filter(notification => !notification.isRead)
+      .length;
+      
+    if (count > 0) {
+      setAnimating(true);
+    } else {
+      setAnimating(false);
+    }
+  }, [notificationHistory, user?.id]);
 
   // Verificar se há notificações não lidas deste usuário
   const userUnreadCount = notificationHistory
@@ -336,7 +382,7 @@ export function NotificationButton({ onClick }: { onClick: () => void }) {
     <motion.div 
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      animate={userUnreadCount > 0 ? { 
+      animate={animating ? { 
         scale: [1, 1.1, 1],
         transition: { 
           repeat: Infinity, 
