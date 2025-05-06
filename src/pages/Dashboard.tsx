@@ -147,8 +147,8 @@ export default function Dashboard() {
       animate="show"
     >
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
           Visão geral das suas finanças
         </p>
       </div>
@@ -159,110 +159,108 @@ export default function Dashboard() {
       </div>
 
       {/* Resumo do Mês Atual */}
-      <motion.div variants={item} className="monthly-summary-card">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xl">
-              Resumo de {currentMonthDisplay}
-            </CardTitle>
-            <CardDescription>
-              Comparação com {previousMonthDisplay}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Receitas</p>
-                <p className="text-2xl font-bold text-green-500">
-                  {formatCurrency(currentMonthIncome)}
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg md:text-xl">
+            Resumo de {currentMonthDisplay}
+          </CardTitle>
+          <CardDescription className="text-xs md:text-sm">
+            Comparação com {previousMonthDisplay}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <p className="text-xs md:text-sm font-medium text-muted-foreground">Receitas</p>
+              <p className="text-xl md:text-2xl font-bold text-green-500">
+                {formatCurrency(currentMonthIncome)}
+              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {incomeVariation >= 0 ? (
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingUpIcon className="h-3 w-3" />
+                      +{incomeVariation.toFixed(1)}%
+                    </span>
+                  ) : (
+                    <span className="text-red-500 flex items-center gap-1">
+                      <TrendingDownIcon className="h-3 w-3" />
+                      {incomeVariation.toFixed(1)}%
+                    </span>
+                  )}
                 </p>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    {incomeVariation >= 0 ? (
-                      <span className="text-green-500 flex items-center gap-1">
-                        <TrendingUpIcon className="h-3 w-3" />
-                        +{incomeVariation.toFixed(1)}%
-                      </span>
-                    ) : (
-                      <span className="text-red-500 flex items-center gap-1">
-                        <TrendingDownIcon className="h-3 w-3" />
-                        {incomeVariation.toFixed(1)}%
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">vs. mês anterior</p>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Despesas</p>
-                <p className="text-2xl font-bold text-red-500">
-                  {formatCurrency(currentMonthExpense)}
-                </p>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    {expenseVariation <= 0 ? (
-                      <span className="text-green-500 flex items-center gap-1">
-                        <TrendingDownIcon className="h-3 w-3" />
-                        {Math.abs(expenseVariation).toFixed(1)}%
-                      </span>
-                    ) : (
-                      <span className="text-red-500 flex items-center gap-1">
-                        <TrendingUpIcon className="h-3 w-3" />
-                        +{expenseVariation.toFixed(1)}%
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">vs. mês anterior</p>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Saldo</p>
-                <p className={`text-2xl font-bold ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatCurrency(currentMonthBalance)}
-                </p>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    {balanceVariation >= 0 ? (
-                      <span className="text-green-500 flex items-center gap-1">
-                        <TrendingUpIcon className="h-3 w-3" />
-                        +{balanceVariation.toFixed(1)}%
-                      </span>
-                    ) : (
-                      <span className="text-red-500 flex items-center gap-1">
-                        <TrendingDownIcon className="h-3 w-3" />
-                        {balanceVariation.toFixed(1)}%
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">vs. mês anterior</p>
-                </div>
+                <p className="text-xs text-muted-foreground">vs. mês anterior</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+
+            <div className="space-y-1">
+              <p className="text-xs md:text-sm font-medium text-muted-foreground">Despesas</p>
+              <p className="text-xl md:text-2xl font-bold text-red-500">
+                {formatCurrency(currentMonthExpense)}
+              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {expenseVariation <= 0 ? (
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingDownIcon className="h-3 w-3" />
+                      {Math.abs(expenseVariation).toFixed(1)}%
+                    </span>
+                  ) : (
+                    <span className="text-red-500 flex items-center gap-1">
+                      <TrendingUpIcon className="h-3 w-3" />
+                      +{expenseVariation.toFixed(1)}%
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">vs. mês anterior</p>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs md:text-sm font-medium text-muted-foreground">Saldo</p>
+              <p className={`text-xl md:text-2xl font-bold ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {formatCurrency(currentMonthBalance)}
+              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {balanceVariation >= 0 ? (
+                    <span className="text-green-500 flex items-center gap-1">
+                      <TrendingUpIcon className="h-3 w-3" />
+                      +{balanceVariation.toFixed(1)}%
+                    </span>
+                  ) : (
+                    <span className="text-red-500 flex items-center gap-1">
+                      <TrendingDownIcon className="h-3 w-3" />
+                      {balanceVariation.toFixed(1)}%
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">vs. mês anterior</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Cards Principais */}
-      <motion.div 
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      <motion.div
+        className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
         variants={container}
       >
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xs md:text-sm font-medium">
                 Saldo do Mês
               </CardTitle>
               <WalletIcon className={`h-4 w-4 ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              <div className={`text-lg md:text-2xl font-bold ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {formatCurrency(currentMonthBalance)}
               </div>
               <div className="flex items-center gap-2">
-                <ActivityIcon className="h-4 w-4 text-muted-foreground" />
+                <ActivityIcon className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">
                   Receitas - Despesas
                 </p>
@@ -274,13 +272,13 @@ export default function Dashboard() {
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xs md:text-sm font-medium">
                 Receitas do Mês
               </CardTitle>
               <ArrowUpIcon className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-500">
+              <div className="text-lg md:text-2xl font-bold text-green-500">
                 {formatCurrency(currentMonthIncome)}
               </div>
               <div className="flex items-center gap-2">
@@ -295,13 +293,13 @@ export default function Dashboard() {
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xs md:text-sm font-medium">
                 Despesas do Mês
               </CardTitle>
               <ArrowDownIcon className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-500">
+              <div className="text-lg md:text-2xl font-bold text-red-500">
                 {formatCurrency(currentMonthExpense)}
               </div>
               <div className="flex items-center gap-2">
@@ -316,13 +314,13 @@ export default function Dashboard() {
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-xs md:text-sm font-medium">
                 Despesas Pagas
               </CardTitle>
               <CheckCircleIcon className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-500">
+              <div className="text-lg md:text-2xl font-bold text-blue-500">
                 {totalExpenses ? (paidPercentage).toFixed(1) : 0}%
               </div>
               <Progress value={paidPercentage} className="h-2">
@@ -337,19 +335,19 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Status das Despesas e Próximas Despesas */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="text-sm font-medium">Status das Despesas do Mês</CardTitle>
-              <CardDescription>Distribuição do status de pagamento em {currentMonthDisplay}</CardDescription>
+              <CardTitle className="text-sm md:text-base font-medium">Status das Despesas do Mês</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Distribuição do status de pagamento em {currentMonthDisplay}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs md:text-sm">
                     <div className="flex items-center">
-                      <CheckCircleIcon className="mr-2 h-4 w-4 text-green-500" />
+                      <CheckCircleIcon className="mr-2 h-3 w-3 md:h-4 md:w-4 text-green-500" />
                       <span>Pagas</span>
                     </div>
                     <div className="flex font-medium">
@@ -363,9 +361,9 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs md:text-sm">
                     <div className="flex items-center">
-                      <AlertCircleIcon className="mr-2 h-4 w-4 text-yellow-500" />
+                      <AlertCircleIcon className="mr-2 h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
                       <span>Pendentes</span>
                     </div>
                     <div className="flex font-medium">
@@ -384,9 +382,9 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs md:text-sm">
                     <div className="flex items-center">
-                      <ClockIcon className="mr-2 h-4 w-4 text-blue-500" />
+                      <ClockIcon className="mr-2 h-3 w-3 md:h-4 md:w-4 text-blue-500" />
                       <span>Agendadas</span>
                     </div>
                     <div className="flex font-medium">
@@ -411,8 +409,8 @@ export default function Dashboard() {
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="text-sm font-medium">Próximas Despesas</CardTitle>
-              <CardDescription>Despesas pendentes ou agendadas</CardDescription>
+              <CardTitle className="text-sm md:text-base font-medium">Próximas Despesas</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Despesas pendentes ou agendadas</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -423,9 +421,9 @@ export default function Dashboard() {
                       className="flex items-start justify-between pb-4 border-b last:border-0 last:pb-0"
                     >
                       <div className="space-y-1">
-                        <p className="font-medium">{expense.description || expense.category}</p>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <CalendarClockIcon className="mr-1 h-3.5 w-3.5" />
+                        <p className="text-sm md:text-base font-medium">{expense.description || expense.category}</p>
+                        <div className="flex items-center text-xs md:text-sm text-muted-foreground">
+                          <CalendarClockIcon className="mr-1 h-3 w-3 md:h-3.5 md:w-3.5" />
                           {expense.dueDate ? (
                             <span>Vencimento: {formatDate(expense.dueDate)}</span>
                           ) : (
@@ -433,9 +431,9 @@ export default function Dashboard() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        <span className="font-bold text-red-500">{formatCurrency(expense.amount)}</span>
-                        <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-sm md:text-base font-bold text-red-500">{formatCurrency(expense.amount)}</span>
+                        <span className={`text-[10px] md:text-xs px-2 py-0.5 rounded-full font-medium ${
                           expense.paymentStatus === 'pending' 
                             ? 'bg-yellow-100 text-yellow-800' 
                             : 'bg-blue-100 text-blue-800'
@@ -446,7 +444,7 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-4 text-muted-foreground">
+                  <div className="text-center py-4 text-sm md:text-base text-muted-foreground">
                     Não há despesas pendentes ou agendadas
                   </div>
                 )}
