@@ -9,12 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings, HelpCircle, LightbulbIcon, Eye, EyeOff } from "lucide-react";
+import { LogOut, User, Settings, HelpCircle, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationCenter, NotificationButton } from "@/components/NotificationCenter";
@@ -35,7 +32,6 @@ export function UserNav() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [showTips, setShowTips] = useState(true);
-  const { createTestNotification } = useNotifications();
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const { notificationHistory, unreadCount } = useNotifications();
   const [showHelpDialog, setShowHelpDialog] = useState(false);
@@ -89,7 +85,7 @@ export function UserNav() {
   ];
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 md:gap-3">
       {/* Notificações */}
       <div className="relative z-10">
         <NotificationButton onClick={() => setShowNotificationCenter(true)} />
@@ -105,9 +101,9 @@ export function UserNav() {
         size="icon"
         onClick={() => navigate("/settings")}
         title="Configurações"
-        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        className="h-8 w-8 md:h-9 md:w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
       >
-        <Settings className="h-[18px] w-[18px]" />
+        <Settings className="h-4 w-4 md:h-[18px] md:w-[18px]" />
       </Button>
       
       {/* Ajuda - Atalhos de teclado */}
@@ -116,9 +112,9 @@ export function UserNav() {
         size="icon"
         onClick={() => setShowHelpDialog(true)}
         title="Atalhos de Teclado"
-        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        className="h-8 w-8 md:h-9 md:w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
       >
-        <HelpCircle className="h-[18px] w-[18px]" />
+        <HelpCircle className="h-4 w-4 md:h-[18px] md:w-[18px]" />
       </Button>
       
       {/* Dialog de Ajuda com Atalhos */}
@@ -135,7 +131,7 @@ export function UserNav() {
             {shortcuts.map((shortcut, index) => (
               <div key={index} className="flex items-center justify-between py-2 border-b">
                 <span className="text-sm font-medium">{shortcut.description}</span>
-                <kbd className="px-3 py-1.5 text-sm font-semibold bg-muted rounded-md shadow-sm border border-gray-300">
+                <kbd className="px-2 py-1 text-xs md:text-sm font-semibold bg-muted rounded-md shadow-sm border border-gray-300">
                   {shortcut.key}
                 </kbd>
               </div>
@@ -156,8 +152,8 @@ export function UserNav() {
       {/* Menu do usuário */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-9 w-9 rounded-full transition-colors hover:bg-muted p-0 overflow-hidden">
-            <Avatar className="h-9 w-9">
+          <Button variant="ghost" className="relative h-8 w-8 md:h-9 md:w-9 rounded-full transition-colors hover:bg-muted p-0 overflow-hidden">
+            <Avatar className="h-8 w-8 md:h-9 md:w-9">
               <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || ""} />
               <AvatarFallback>
                 {user?.email ? user.email.substring(0, 2).toUpperCase() : "?"}
@@ -168,8 +164,8 @@ export function UserNav() {
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user?.user_metadata?.name || user?.email}</p>
-              <p className="text-xs leading-none text-muted-foreground">
+              <p className="text-sm font-medium leading-none truncate">{user?.user_metadata?.name || user?.email}</p>
+              <p className="text-xs leading-none text-muted-foreground truncate">
                 {user?.email}
               </p>
             </div>
@@ -179,12 +175,10 @@ export function UserNav() {
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               <User className="mr-2 h-4 w-4" />
               <span>Perfil</span>
-              <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="mr-2 h-4 w-4" />
               <span>Configurações</span>
-              <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuCheckboxItem
               checked={showTips}
@@ -204,7 +198,6 @@ export function UserNav() {
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sair</span>
-            <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

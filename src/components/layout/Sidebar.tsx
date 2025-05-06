@@ -75,7 +75,11 @@ const navigation = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const location = useLocation();
   const { signOut, user } = useAuth();
 
@@ -110,8 +114,14 @@ export function Sidebar() {
     return user?.email || "Usuário";
   };
 
+  const handleNavigation = (href: string) => {
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="flex h-full w-72 flex-col border-r bg-card">
+    <div className="flex h-full w-full flex-col border-r bg-card">
       <div className="flex h-16 items-center gap-3 border-b px-6">
         <img src={logo} alt="Expense Guru Logo" className="h-8 w-8" />
         <div>
@@ -144,6 +154,7 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 to={item.href}
+                onClick={() => handleNavigation(item.href)}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative group",
                   isActive
@@ -154,7 +165,7 @@ export function Sidebar() {
               >
                 <item.icon className="h-4 w-4 shrink-0" />
                 <span className="truncate">{item.name}</span>
-                <span className="absolute left-0 -translate-x-full rounded-r-lg bg-primary px-2 py-1 text-xs text-primary-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                <span className="absolute left-0 -translate-x-full rounded-r-lg bg-primary px-2 py-1 text-xs text-primary-foreground opacity-0 transition-opacity group-hover:opacity-100 hidden md:block">
                   {item.description}
                 </span>
               </Link>
