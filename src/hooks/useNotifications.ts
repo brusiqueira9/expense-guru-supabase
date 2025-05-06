@@ -75,6 +75,7 @@ export function useNotifications() {
       const storedNotifications = localStorage.getItem(`notifications:${userId}`);
       if (storedNotifications) {
         const parsed = JSON.parse(storedNotifications);
+        // Garantir que apenas notificações do usuário atual sejam carregadas
         const userNotifications = parsed.filter((n: any) => n.userId === userId);
         setNotificationHistory(userNotifications.map((n: any) => ({
           ...n,
@@ -102,17 +103,17 @@ export function useNotifications() {
     if (!userId || notificationHistory.length === 0) return;
 
     try {
-      const notificationsWithUserId = notificationHistory.map(notification => ({
-        ...notification,
-        userId
-      }));
-      localStorage.setItem(`notifications:${userId}`, JSON.stringify(notificationsWithUserId));
+      // Garantir que apenas notificações do usuário atual sejam salvas
+      const userNotifications = notificationHistory.filter(n => n.userId === userId);
+      localStorage.setItem(`notifications:${userId}`, JSON.stringify(userNotifications));
     } catch (error) {
       console.error('Erro ao salvar notificações:', error);
     }
   }, [notificationHistory, userId]);
 
   const markAsRead = (id: string) => {
+    if (!userId) return;
+
     setReadNotifications(prev => {
       const newSet = new Set(prev);
       newSet.add(id);
@@ -121,24 +122,50 @@ export function useNotifications() {
 
     setNotificationHistory(prev => 
       prev.map(notification => 
-        notification.id === id ? { ...notification, isRead: true } : notification
+        notification.id === id && notification.userId === userId 
+          ? { ...notification, isRead: true } 
+          : notification
       )
     );
+
+    // Salvar IDs de notificações lidas no localStorage
+    try {
+      const readIds = Array.from(readNotifications);
+      readIds.push(id);
+      localStorage.setItem(`read_notifications:${userId}`, JSON.stringify(readIds));
+    } catch (error) {
+      console.error('Erro ao salvar notificações lidas:', error);
+    }
   };
 
   const markAllAsRead = () => {
-    const allIds = notificationHistory.map(n => n.id);
+    if (!userId) return;
+
+    const userNotifications = notificationHistory.filter(n => n.userId === userId);
+    const allIds = userNotifications.map(n => n.id);
     setReadNotifications(new Set(allIds));
     setNotificationHistory(prev => 
-      prev.map(notification => ({ ...notification, isRead: true }))
+      prev.map(notification => 
+        notification.userId === userId 
+          ? { ...notification, isRead: true } 
+          : notification
+      )
     );
+
+    // Salvar IDs de notificações lidas no localStorage
+    try {
+      localStorage.setItem(`read_notifications:${userId}`, JSON.stringify(allIds));
+    } catch (error) {
+      console.error('Erro ao salvar notificações lidas:', error);
+    }
   };
 
   const clearAllNotifications = () => {
-    setNotificationHistory([]);
-    if (userId) {
-      localStorage.removeItem(`notifications:${userId}`);
-    }
+    if (!userId) return;
+
+    setNotificationHistory(prev => prev.filter(n => n.userId !== userId));
+    localStorage.removeItem(`notifications:${userId}`);
+    localStorage.removeItem(`read_notifications:${userId}`);
   };
 
   const updateNotificationPreferences = (preferences: Partial<typeof notificationPreferences>) => {
@@ -187,7 +214,7 @@ export function useNotifications() {
       category,
       transactionId,
       relatedEntityId,
-      userId
+      userId // Garantir que o userId seja sempre definido
     };
 
     setNotificationHistory(prev => [...prev, newNotification]);
