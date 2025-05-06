@@ -81,13 +81,13 @@ const NotificationCard = ({
   };
 
   const typeIcons = {
-    success: <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-green-500" />,
-    error: <X className="h-4 w-4 md:h-5 md:w-5 text-red-500" />,
-    warning: <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-yellow-500" />,
-    info: <Info className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />,
-    transaction: <Clock className="h-4 w-4 md:h-5 md:w-5 text-purple-500" />,
-    goal: <Bell className="h-4 w-4 md:h-5 md:w-5 text-indigo-500" />,
-    reminder: <Bell className="h-4 w-4 md:h-5 md:w-5 text-orange-500" />,
+    success: <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-500" />,
+    error: <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-red-500" />,
+    warning: <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-yellow-500" />,
+    info: <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-500" />,
+    transaction: <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-500" />,
+    goal: <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-indigo-500" />,
+    reminder: <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-500" />,
   };
 
   return (
@@ -96,27 +96,27 @@ const NotificationCard = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, y: -10 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="mb-3"
+      className="mb-2 sm:mb-3"
     >
       <Card 
         className={`overflow-hidden transition-all duration-200 ${
           notification.isRead ? 'bg-background opacity-70 hover:opacity-90' : priorityColors[notification.priority]
         } hover:shadow-md border`}
       >
-        <CardHeader className="py-2 px-3 md:py-3 md:px-4 pb-2">
+        <CardHeader className="py-1.5 px-2 sm:py-2 sm:px-3 md:py-3 md:px-4 pb-1 sm:pb-2">
           <div className="flex justify-between items-start">
-            <div className="flex gap-2 items-center">
-              <div className="p-1 rounded-full md:p-1.5 bg-background/80 backdrop-blur-sm">
+            <div className="flex gap-1.5 sm:gap-2 items-center">
+              <div className="p-0.5 sm:p-1 md:p-1.5 rounded-full bg-background/80 backdrop-blur-sm">
                 {typeIcons[notification.type]}
               </div>
               <div>
-                <CardTitle className="text-xs md:text-sm font-medium flex items-center">
+                <CardTitle className="text-[11px] sm:text-xs md:text-sm font-medium flex items-center">
                   {notification.title}
                   {notification.priority === 'high' && !notification.isRead && (
-                    <Badge variant="destructive" className="ml-2 text-[8px] md:text-[10px] h-3 md:h-4 px-1 md:px-1.5">Urgente</Badge>
+                    <Badge variant="destructive" className="ml-1.5 sm:ml-2 text-[7px] sm:text-[8px] md:text-[10px] h-2.5 sm:h-3 md:h-4 px-1 sm:px-1.5">Urgente</Badge>
                   )}
                 </CardTitle>
-                <CardDescription className="text-[10px] md:text-xs">
+                <CardDescription className="text-[9px] sm:text-[10px] md:text-xs">
                   {formatDistanceToNow(new Date(notification.createdAt), { 
                     addSuffix: true,
                     locale: ptBR 
@@ -124,30 +124,29 @@ const NotificationCard = ({
                 </CardDescription>
               </div>
             </div>
-            <div className="flex gap-1">
-              {!notification.isRead && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-5 w-5 md:h-6 md:w-6 rounded-full hover:bg-background/80"
-                  onClick={() => onMarkAsRead(notification.id)}
-                >
-                  <CheckCheck className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                </Button>
-              )}
-            </div>
+            
+            {!notification.isRead && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 rounded-full hover:bg-background/80"
+                onClick={() => onMarkAsRead(notification.id)}
+              >
+                <CheckCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5" />
+              </Button>
+            )}
           </div>
         </CardHeader>
-        <CardContent className="py-1 px-3 md:py-1 md:px-4">
-          <p className="text-xs md:text-sm whitespace-pre-line leading-relaxed">{notification.message}</p>
+        <CardContent className="py-1 px-2 sm:py-1 sm:px-3 md:py-1 md:px-4">
+          <p className="text-[10px] sm:text-xs md:text-sm whitespace-pre-line leading-relaxed">{notification.message}</p>
         </CardContent>
         {(notification.actionLabel || !notification.isRead) && (
-          <CardFooter className="py-1.5 px-3 md:py-2 md:px-4 flex justify-end gap-2 bg-background/40 backdrop-blur-sm">
+          <CardFooter className="py-1 px-2 sm:py-1.5 sm:px-3 md:py-2 md:px-4 flex justify-end gap-1.5 sm:gap-2 bg-background/40 backdrop-blur-sm">
             {notification.actionLabel && (
               <Button 
                 variant="secondary" 
                 size="sm" 
-                className="text-[10px] md:text-xs h-6 md:h-7 px-2 md:px-3 rounded-full"
+                className="text-[9px] sm:text-[10px] md:text-xs h-5 sm:h-6 md:h-7 px-1.5 sm:px-2 md:px-3 rounded-full"
                 onClick={() => {
                   onMarkAsRead(notification.id);
                   if (notification.actionCallback) {
@@ -162,7 +161,7 @@ const NotificationCard = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-[10px] md:text-xs h-6 md:h-7 px-2 md:px-3 rounded-full"
+                className="text-[9px] sm:text-[10px] md:text-xs h-5 sm:h-6 md:h-7 px-1.5 sm:px-2 md:px-3 rounded-full"
                 onClick={() => onMarkAsRead(notification.id)}
               >
                 Marcar como lida
@@ -249,36 +248,36 @@ export function NotificationCenter({
   return (
     <Sheet open={show} onOpenChange={onClose}>
       <SheetContent className="w-full sm:w-[400px] p-0">
-        <SheetHeader className="px-4 py-3 border-b">
+        <SheetHeader className="px-3 sm:px-4 py-2 sm:py-3 border-b">
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-base md:text-lg">Notificações</SheetTitle>
-            <div className="flex items-center gap-2">
+            <SheetTitle className="text-sm sm:text-base md:text-lg">Notificações</SheetTitle>
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 md:h-9 md:w-9"
+                className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9"
                 onClick={() => setShowSettings(true)}
               >
-                <Settings className="h-4 w-4 md:h-5 md:w-5" />
+                <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 md:h-9 md:w-9"
+                className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9"
                 onClick={() => setShowClearConfirm(true)}
               >
-                <Trash2 className="h-4 w-4 md:h-5 md:w-5" />
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
               </Button>
             </div>
           </div>
         </SheetHeader>
 
-        <div className="p-3 border-b">
+        <div className="p-2 sm:p-3 border-b">
           <Tabs defaultValue="all" value={filter} onValueChange={setFilter} className="w-full">
             <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="all" className="text-xs md:text-sm">Todas</TabsTrigger>
-              <TabsTrigger value="unread" className="text-xs md:text-sm">Não lidas</TabsTrigger>
-              <TabsTrigger value="read" className="text-xs md:text-sm">Lidas</TabsTrigger>
+              <TabsTrigger value="all" className="text-[10px] sm:text-xs md:text-sm">Todas</TabsTrigger>
+              <TabsTrigger value="unread" className="text-[10px] sm:text-xs md:text-sm">Não lidas</TabsTrigger>
+              <TabsTrigger value="read" className="text-[10px] sm:text-xs md:text-sm">Lidas</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -359,12 +358,12 @@ export function NotificationCenter({
         </div>
 
         <ScrollArea className="h-[calc(100vh-180px)]">
-          <div className="p-3">
+          <div className="p-2 sm:p-3">
             <AnimatePresence>
               {filteredNotifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <BellOff className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-2" />
-                  <p className="text-sm md:text-base text-muted-foreground">Nenhuma notificação encontrada</p>
+                <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+                  <BellOff className="h-6 w-6 sm:h-8 sm:w-8 md:h-12 md:w-12 text-muted-foreground mb-1.5 sm:mb-2" />
+                  <p className="text-xs sm:text-sm md:text-base text-muted-foreground">Nenhuma notificação encontrada</p>
                 </div>
               ) : (
                 filteredNotifications.map((notification) => (
@@ -380,14 +379,14 @@ export function NotificationCenter({
           </div>
         </ScrollArea>
 
-        <SheetFooter className="p-3 border-t">
+        <SheetFooter className="p-2 sm:p-3 border-t">
           <Button
             variant="outline"
-            className="w-full text-xs md:text-sm"
+            className="w-full text-[10px] sm:text-xs md:text-sm"
             onClick={markAllAsRead}
             disabled={!filteredNotifications.some(n => !n.isRead)}
           >
-            <CheckSquare className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+            <CheckSquare className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 mr-1.5 sm:mr-2" />
             Marcar todas como lidas
           </Button>
         </SheetFooter>
@@ -396,16 +395,16 @@ export function NotificationCenter({
         <Dialog open={showSettings} onOpenChange={setShowSettings}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-base md:text-lg">Configurações de Notificações</DialogTitle>
-              <DialogDescription className="text-xs md:text-sm">
+              <DialogTitle className="text-sm sm:text-base md:text-lg">Configurações de Notificações</DialogTitle>
+              <DialogDescription className="text-[10px] sm:text-xs md:text-sm">
                 Personalize como você recebe e visualiza as notificações
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label className="text-xs md:text-sm">Tipos de Notificações</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex items-center space-x-2">
+            <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="text-[10px] sm:text-xs md:text-sm">Tipos de Notificações</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+                  <div className="flex items-center space-x-1.5 sm:space-x-2">
                     <Checkbox
                       id="showTransactionReminders"
                       checked={notificationPreferences.showTransactionReminders}
@@ -415,9 +414,9 @@ export function NotificationCenter({
                         });
                       }}
                     />
-                    <Label htmlFor="showTransactionReminders" className="text-xs">Lembretes de Transações</Label>
+                    <Label htmlFor="showTransactionReminders" className="text-[10px] sm:text-xs">Lembretes de Transações</Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1.5 sm:space-x-2">
                     <Checkbox
                       id="showGoalUpdates"
                       checked={notificationPreferences.showGoalUpdates}
@@ -427,45 +426,17 @@ export function NotificationCenter({
                         });
                       }}
                     />
-                    <Label htmlFor="showGoalUpdates" className="text-xs">Atualizações de Metas</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="showFinancialTips"
-                      checked={notificationPreferences.showFinancialTips}
-                      onCheckedChange={(checked) => {
-                        updateNotificationPreferences({
-                          showFinancialTips: checked as boolean
-                        });
-                      }}
-                    />
-                    <Label htmlFor="showFinancialTips" className="text-xs">Dicas Financeiras</Label>
+                    <Label htmlFor="showGoalUpdates" className="text-[10px] sm:text-xs">Atualizações de Metas</Label>
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs md:text-sm">Prioridade Mínima</Label>
-                <Select
-                  value={notificationPreferences.minPriority}
-                  onValueChange={(value: PriorityLevel) => {
-                    updateNotificationPreferences({
-                      minPriority: value
-                    });
-                  }}
-                >
-                  <SelectTrigger className="text-xs md:text-sm">
-                    <SelectValue placeholder="Selecione a prioridade mínima" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low" className="text-xs">Baixa</SelectItem>
-                    <SelectItem value="medium" className="text-xs">Média</SelectItem>
-                    <SelectItem value="high" className="text-xs">Alta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <DialogFooter>
-              <Button onClick={() => setShowSettings(false)} className="w-full text-xs md:text-sm">
+              <Button
+                variant="outline"
+                onClick={() => setShowSettings(false)}
+                className="w-full text-[10px] sm:text-xs md:text-sm"
+              >
                 Fechar
               </Button>
             </DialogFooter>
@@ -476,23 +447,23 @@ export function NotificationCenter({
         <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-base md:text-lg">Limpar Todas as Notificações</DialogTitle>
-              <DialogDescription className="text-xs md:text-sm">
-                Tem certeza que deseja remover todas as notificações? Esta ação não pode ser desfeita.
+              <DialogTitle className="text-sm sm:text-base md:text-lg">Limpar Notificações</DialogTitle>
+              <DialogDescription className="text-[10px] sm:text-xs md:text-sm">
+                Tem certeza que deseja limpar todas as notificações? Esta ação não pode ser desfeita.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex gap-2">
+            <DialogFooter className="gap-1.5 sm:gap-2">
               <Button
                 variant="outline"
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 text-xs md:text-sm"
+                className="text-[10px] sm:text-xs md:text-sm"
               >
                 Cancelar
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleClearAll}
-                className="flex-1 text-xs md:text-sm"
+                className="text-[10px] sm:text-xs md:text-sm"
               >
                 Limpar Tudo
               </Button>
@@ -515,13 +486,13 @@ export function NotificationButton({ onClick }: { onClick: () => void }) {
       variant="ghost"
       size="icon"
       onClick={onClick}
-      className="relative h-8 w-8 md:h-9 md:w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      className="relative h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
     >
-      <Bell className="h-4 w-4 md:h-[18px] md:w-[18px]" />
+      <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-[18px] md:w-[18px]" />
       {unreadCount > 0 && (
         <Badge
           variant="destructive"
-          className="absolute -top-1 -right-1 h-4 w-4 md:h-5 md:w-5 p-0 flex items-center justify-center text-[10px] md:text-xs"
+          className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 p-0 flex items-center justify-center text-[8px] sm:text-[10px] md:text-xs"
         >
           {unreadCount > 99 ? "99+" : unreadCount}
         </Badge>
