@@ -5,6 +5,8 @@
 [build.environment]
   NODE_VERSION = "20.9.0"
   NPM_FLAGS = "--legacy-peer-deps"
+  VITE_SUPABASE_URL = ""
+  VITE_SUPABASE_ANON_KEY = ""
 
 [[redirects]]
   from = "/*"
