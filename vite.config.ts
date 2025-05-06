@@ -36,5 +36,13 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  base: './',
+  css: {
+    postcss: {
+      plugins: [
+        require('tailwindcss'),
+        require('autoprefixer'),
+      ],
+    },
+  },
+  base: '/',
 }));
