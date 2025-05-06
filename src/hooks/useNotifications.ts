@@ -1,15 +1,11 @@
 import { useEffect, useContext, useState } from 'react';
 import { useTransactions } from '@/context/TransactionContext';
-import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
-import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 import { supabase } from '@/lib/supabase';
-import { BellIcon, XCircleIcon, CheckCircle2Icon, AlertCircleIcon, InfoIcon, CalendarDaysIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import * as React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 // Tipos de notificações
 export type NotificationType = 'success' | 'error' | 'warning' | 'info' | 'transaction' | 'goal' | 'reminder';
@@ -62,7 +58,7 @@ export function useNotifications() {
     showGoalUpdates: true,
     showFinancialTips: true,
     minPriority: 'low' as PriorityLevel,
-    showToasts: false // Alterado para false para desativar notificações pop-up
+    showToasts: false
   });
 
   const { user } = useAuth();
@@ -73,16 +69,17 @@ export function useNotifications() {
 
   // Carregar notificações do localStorage ao iniciar
   useEffect(() => {
-    if (userId) {
+    if (!userId) return;
+
+    try {
       const storedNotifications = localStorage.getItem(`notifications:${userId}`);
       if (storedNotifications) {
         const parsed = JSON.parse(storedNotifications);
-        // Filtra notificações para garantir que apenas as do usuário atual sejam carregadas
-        const userNotifications = parsed.filter((n: any) => !n.userId || n.userId === userId);
+        const userNotifications = parsed.filter((n: any) => n.userId === userId);
         setNotificationHistory(userNotifications.map((n: any) => ({
           ...n,
           createdAt: new Date(n.createdAt),
-          userId: n.userId || userId // Garante que todas as notificações tenham userId
+          userId
         })));
       }
 
@@ -95,34 +92,25 @@ export function useNotifications() {
       if (readNotificationIds) {
         setReadNotifications(new Set(JSON.parse(readNotificationIds)));
       }
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error);
     }
   }, [userId]);
 
   // Salvar notificações no localStorage quando mudarem
   useEffect(() => {
-    if (userId && notificationHistory.length > 0) {
-      // Garantir que todas as notificações tenham o userId antes de salvar
+    if (!userId || notificationHistory.length === 0) return;
+
+    try {
       const notificationsWithUserId = notificationHistory.map(notification => ({
         ...notification,
-        userId: notification.userId || userId
+        userId
       }));
       localStorage.setItem(`notifications:${userId}`, JSON.stringify(notificationsWithUserId));
+    } catch (error) {
+      console.error('Erro ao salvar notificações:', error);
     }
   }, [notificationHistory, userId]);
-
-  // Salvar preferências de notificação
-  useEffect(() => {
-    if (userId) {
-      localStorage.setItem(`notification_preferences:${userId}`, JSON.stringify(notificationPreferences));
-    }
-  }, [notificationPreferences, userId]);
-
-  // Salvar ids de notificações lidas
-  useEffect(() => {
-    if (userId && readNotifications.size > 0) {
-      localStorage.setItem(`read_notifications:${userId}`, JSON.stringify(Array.from(readNotifications)));
-    }
-  }, [readNotifications, userId]);
 
   const markAsRead = (id: string) => {
     setReadNotifications(prev => {
@@ -131,7 +119,6 @@ export function useNotifications() {
       return newSet;
     });
 
-    // Atualizar também no histórico
     setNotificationHistory(prev => 
       prev.map(notification => 
         notification.id === id ? { ...notification, isRead: true } : notification
@@ -140,25 +127,11 @@ export function useNotifications() {
   };
 
   const markAllAsRead = () => {
-    // Marcar todas as notificações como lidas
     const allIds = notificationHistory.map(n => n.id);
     setReadNotifications(new Set(allIds));
-    
-    // Atualizar histórico
     setNotificationHistory(prev => 
       prev.map(notification => ({ ...notification, isRead: true }))
     );
-
-    // Atualizar status de notificações de transações no banco
-    const transactionIds = notificationHistory
-      .filter(n => n.transactionId && !n.isRead)
-      .map(n => n.transactionId);
-    
-    if (transactionIds.length > 0) {
-      transactionIds.forEach(id => {
-        if (id) markNotificationAsRead(id);
-      });
-    }
   };
 
   const clearAllNotifications = () => {
@@ -175,8 +148,9 @@ export function useNotifications() {
     }));
   };
 
-  // Função para adicionar uma nova notificação
   const addNotification = (props: NotificationProps) => {
+    if (!userId) return;
+
     const { 
       id = crypto.randomUUID(), 
       title, 
@@ -192,19 +166,14 @@ export function useNotifications() {
       showToast = false
     } = props;
 
-    // Verificar preferências do usuário
     if (!notificationPreferences.showTransactionReminders && type === 'transaction') return;
     if (!notificationPreferences.showGoalUpdates && type === 'goal') return;
     if (!notificationPreferences.showFinancialTips && type === 'info') return;
 
-    // Verificar nível de prioridade mínimo
-    const priorityLevels: Record<PriorityLevel, number> = { high: 3, medium: 2, low: 1 };
-    if (priorityLevels[priority] < priorityLevels[notificationPreferences.minPriority]) return;
+    if (priority === 'low' && notificationPreferences.minPriority === 'medium') return;
+    if (priority === 'low' && notificationPreferences.minPriority === 'high') return;
+    if (priority === 'medium' && notificationPreferences.minPriority === 'high') return;
 
-    // Verificar se já foi lida
-    if (isRead || readNotifications.has(id)) return;
-
-    // Garantir que a notificação tenha o ID do usuário atual
     const newNotification: NotificationItem = {
       id,
       title,
@@ -221,84 +190,14 @@ export function useNotifications() {
       userId
     };
 
-    setNotificationHistory(prev => [newNotification, ...prev].slice(0, 50));
+    setNotificationHistory(prev => [...prev, newNotification]);
 
-    // Exibir toast apenas se showToast for true
-    if (showToast) {
-      // Criar conteúdo para o toast
-      const renderToastContent = () => {
-        // Em vez de usar JSX diretamente, criamos o conteúdo como texto formatado
-        let content = `<div style="text-align: left;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <strong>${title}</strong>
-            ${priority === 'high' ? '<span style="background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">Urgente</span>' : ''}
-          </div>
-          <p style="font-size: 0.875rem; white-space: pre-line; margin: 0;">${message}</p>
-        </div>`;
-        
-        return content;
-      };
-
-      // Configurar ações do toast
-      const toastActions: Record<string, any> = {
-        duration: priority === 'high' ? 10000 : 6000,
-      };
-
-      // Adicionar ação personalizada se fornecida
-      if (actionLabel && actionCallback) {
-        toastActions.action = {
-          label: actionLabel,
-          onClick: () => {
-            actionCallback();
-            markAsRead(id);
-          }
-        };
-      } else {
-        // Ação padrão para marcar como lida
-        toastActions.action = {
-          label: "Marcar como Lida",
-          onClick: () => markAsRead(id)
-        };
-      }
-
-      // Exibir toast com base no tipo
-      switch (type) {
-        case 'success':
-          toast.success(title, {
-            description: message,
-            ...toastActions
-          });
-          break;
-        case 'error':
-          toast.error(title, {
-            description: message,
-            ...toastActions
-          });
-          break;
-        case 'warning':
-          toast.warning(title, {
-            description: message,
-            ...toastActions
-          });
-          break;
-        case 'info':
-        case 'goal':
-          toast.info(title, {
-            description: message,
-            ...toastActions
-          });
-          break;
-        case 'transaction':
-        case 'reminder':
-          toast.warning(title, {
-            description: message,
-            ...toastActions
-          });
-          break;
-      }
+    if (showToast && notificationPreferences.showToasts) {
+      toast(title, {
+        description: message,
+        duration: 5000,
+      });
     }
-
-    return id;
   };
   
   // Função para marcar notificação de transação como lida no Supabase
@@ -317,30 +216,20 @@ export function useNotifications() {
 
   // Verificar e notificar sobre despesas que vencem nos próximos dias
   useEffect(() => {
-    // Só executar se o usuário estiver autenticado e as transações estiverem carregadas
     if (!auth?.user || loading || !notificationPreferences.showTransactionReminders) return;
 
-    // Obter data atual no formato ISO sem timezone (YYYY-MM-DD)
     const today = new Date().toISOString().split('T')[0];
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    const threeDaysFromNowStr = threeDaysFromNow.toISOString().split('T')[0];
     
-    // Calcular 3 dias a partir de hoje usando manipulação de string ISO
-    const getDateInXDays = (dateStr: string, days: number) => {
-      const date = new Date(dateStr + 'T00:00:00');
-      date.setDate(date.getDate() + days);
-      return date.toISOString().split('T')[0];
-    };
-    
-    const threeDaysFromNow = getDateInXDays(today, 3);
-    
-    // Agrupar despesas por dia de vencimento
     const upcomingExpensesByDay = new Map<string, any[]>();
     
     transactions.forEach(t => {
       if (t.type !== 'expense' || !t.dueDate || t.paymentStatus === 'paid' || t.isnotificationread) return;
       
-      // Usar string de data diretamente para comparação (formato YYYY-MM-DD)
       const dueDate = t.dueDate;
-      if (dueDate >= today && dueDate <= threeDaysFromNow) {
+      if (dueDate >= today && dueDate <= threeDaysFromNowStr) {
         if (!upcomingExpensesByDay.has(dueDate)) {
           upcomingExpensesByDay.set(dueDate, []);
         }
@@ -348,18 +237,11 @@ export function useNotifications() {
       }
     });
 
-    // Notificar por dia de vencimento
     upcomingExpensesByDay.forEach((expenses, dateStr) => {
-      // Calcular dias até o vencimento como diferença entre strings de data
-      const getDaysBetween = (start: string, end: string) => {
-        const startDate = new Date(start + 'T00:00:00');
-        const endDate = new Date(end + 'T00:00:00');
-        return Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      };
+      const daysUntilDue = Math.round(
+        (new Date(dateStr).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24)
+      );
       
-      const daysUntilDue = getDaysBetween(today, dateStr);
-      
-      // Determinar a prioridade com base na proximidade do vencimento
       let priority: PriorityLevel = 'medium';
       if (daysUntilDue === 0) priority = 'high';
       else if (daysUntilDue === 1) priority = 'medium';
@@ -376,10 +258,8 @@ export function useNotifications() {
         title = `${expenses.length} despesa(s) vencem em ${daysUntilDue} dias`;
       }
       
-      // Criar mensagem de notificação com formatação melhorada
       let message = `Valor total: ${formatCurrency(totalAmount)}\n\n`;
       
-      // Adicionar todas as despesas na mensagem, limitando a 5
       expenses.slice(0, 5).forEach(expense => {
         message += `• ${expense.description || expense.category}: ${formatCurrency(expense.amount)}\n`;
       });
@@ -388,10 +268,8 @@ export function useNotifications() {
         message += `\n...e mais ${expenses.length - 5} despesa(s)`;
       }
 
-      // Tratar como uma única notificação agrupada com ID baseado na data
       const notificationId = `upcoming-expenses-${dateStr}`;
       
-      // Adicionar notificação com ação personalizada, sem exibir toast
       addNotification({
         id: notificationId,
         title,
@@ -400,23 +278,16 @@ export function useNotifications() {
         priority,
         actionLabel: "Ver Despesas",
         actionCallback: () => {
-          // Navegar para a página de transações e aplicar filtros
           navigate('/transactions');
           updateFilters({
             type: 'expense',
-            paymentStatus: 'pending' // Corrigido para aceitar apenas um status
-          });
-          
-          // Marcar notificações como lidas
-          expenses.forEach(expense => {
-            markNotificationAsRead(expense.id);
+            paymentStatus: 'pending'
           });
         },
-        transactionId: expenses[0].id, // Referência ao primeiro ID para rastreamento
-        showToast: false // Não exibir toast automático
+        showToast: false
       });
     });
-  }, [transactions, navigate, updateFilters, auth?.user, readNotifications, loading, notificationPreferences]);
+  }, [transactions, auth?.user, loading, notificationPreferences, navigate, updateFilters]);
 
   // Atualizar o estado de carregamento quando as transações são carregadas
   useEffect(() => {
@@ -451,7 +322,7 @@ export function useNotifications() {
           priority: 'high',
           actionLabel: "Ver detalhes",
           actionCallback: () => {
-            navigate('/transactions?filter=pending');
+            // Marcar notificações como lidas
           },
           showToast: false
         });
@@ -463,7 +334,7 @@ export function useNotifications() {
           priority: 'medium',
           actionLabel: "Ver meta",
           actionCallback: () => {
-            navigate('/goals');
+            // Marcar notificações como lidas
           },
           showToast: false
         });
@@ -474,7 +345,7 @@ export function useNotifications() {
         }
       }, 3000);
     }
-  }, [auth?.user, navigate]);
+  }, [auth?.user]);
 
   // Adicionar dicas financeiras periódicas
   useEffect(() => {
@@ -515,181 +386,24 @@ export function useNotifications() {
       // Adicionar dica como notificação, sem exibir toast
       setTimeout(() => {
         addNotification({
-          title: `Dica financeira: ${randomTip.title}`,
+          title: randomTip.title,
           message: randomTip.message,
           type: 'info',
-          priority: 'low',
-          showToast: false // Não exibir toast automático
+          priority: 'medium',
+          showToast: false
         });
-        
-        // Registrar que mostrou dica hoje com data ISO
-        localStorage.setItem(`last_tip_date:${auth?.user?.id}`, today);
-      }, 10000);
+      }, 3000);
     }
   }, [auth?.user, notificationPreferences]);
 
-  // Função para verificar se uma transação ou meta pertence ao usuário atual
-  const belongsToCurrentUser = (item: any, userId: string | undefined) => {
-    if (!userId) return false;
-    return item.userId === userId || item.user_id === userId;
-  };
-
-  // Lógica para gerar notificações com base nos dados
-  const generateNotifications = () => {
-    const notifications: NotificationItem[] = [];
-    
-    // Notificações para transações recorrentes
-    transactions
-      .filter(transaction => belongsToCurrentUser(transaction, userId))
-      .filter(transaction => transaction.recurrence !== 'none')
-      .forEach(transaction => {
-        // ... existing code ...
-      });
-    
-    // Notificações para metas financeiras próximas ao vencimento
-    // goals
-    //   .filter(goal => belongsToCurrentUser(goal, userId))
-    //   .filter(goal => {
-    //     // ... existing code ...
-    //   })
-    //   .forEach(goal => {
-    //     // ... existing code ...
-    //   });
-    
-    // Notificações para despesas com vencimento próximo
-    transactions
-      .filter(transaction => belongsToCurrentUser(transaction, userId))
-      .filter(transaction => {
-        // ... existing code ...
-      })
-      .forEach(transaction => {
-        // ... existing code ...
-      });
-    
-    // Notificações para orçamentos próximos do limite
-    // budgets
-    //   .filter(budget => belongsToCurrentUser(budget, userId))
-    //   .forEach(budget => {
-    //     // ... existing code ...
-    //   });
-    
-    return notifications;
-  };
-
-  // Simula notificações para teste durante inicialização
-  const createTestNotifications = () => {
-    const notifications: NotificationItem[] = [];
-    
-    // Notificações para transações recorrentes
-    transactions
-      .filter(transaction => belongsToCurrentUser(transaction, userId))
-      .filter(transaction => transaction.recurrence !== 'none')
-      .forEach(transaction => {
-        // ... existing code ...
-      });
-    
-    // Notificações para metas financeiras próximas ao vencimento
-    // goals
-    //   .filter(goal => belongsToCurrentUser(goal, userId))
-    //   .filter(goal => {
-    //     // ... existing code ...
-    //   })
-    //   .forEach(goal => {
-    //     // ... existing code ...
-    //   });
-    
-    // Notificações para despesas com vencimento próximo
-    transactions
-      .filter(transaction => belongsToCurrentUser(transaction, userId))
-      .filter(transaction => {
-        // ... existing code ...
-      })
-      .forEach(transaction => {
-        // ... existing code ...
-      });
-    
-    // Notificações para orçamentos próximos do limite
-    // budgets
-    //   .filter(budget => belongsToCurrentUser(budget, userId))
-    //   .forEach(budget => {
-    //     // ... existing code ...
-    //   });
-    
-    return notifications;
-  };
-
-  // Filtra notificações para mostrar apenas as do usuário atual
-  const getNotificationsForCurrentUser = () => {
-    if (!userId) return [];
-    return notificationHistory.filter(notification => {
-      // Se a notificação não tem userId definido OU se o userId corresponde ao usuário atual
-      return !notification.userId || notification.userId === userId;
-    });
-  };
-
   return {
-    notificationHistory: getNotificationsForCurrentUser(),
+    notificationHistory: notificationHistory.filter(notification => notification.userId === userId),
     markAsRead,
     markAllAsRead,
     clearAllNotifications,
     addNotification,
     notificationPreferences,
     updateNotificationPreferences,
-    unreadCount: getNotificationsForCurrentUser().filter(n => !n.isRead).length, // Recalcular com base nas notificações filtradas
-    // Adicionar notificação de teste para demonstrar o funcionamento
-    createTestNotification: () => {
-      const notificationTypes: NotificationType[] = ['success', 'error', 'warning', 'info', 'transaction', 'goal', 'reminder'];
-      const priorityLevels: PriorityLevel[] = ['high', 'medium', 'low'];
-      
-      const randomType = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
-      const randomPriority = priorityLevels[Math.floor(Math.random() * priorityLevels.length)];
-      
-      const notifications = {
-        success: {
-          title: 'Operação bem-sucedida!',
-          message: 'Sua solicitação foi processada com sucesso.'
-        },
-        error: {
-          title: 'Erro ao processar',
-          message: 'Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.'
-        },
-        warning: {
-          title: 'Atenção!',
-          message: 'Algumas informações podem estar incompletas.'
-        },
-        info: {
-          title: 'Dica financeira',
-          message: 'Economize até 30% separando 10% do seu salário todo mês.'
-        },
-        transaction: {
-          title: 'Lembrete de transação',
-          message: 'Você tem uma despesa a vencer nos próximos dias.'
-        },
-        goal: {
-          title: 'Meta alcançada!',
-          message: 'Parabéns! Você alcançou 50% da sua meta de economia.'
-        },
-        reminder: {
-          title: 'Lembrete',
-          message: 'Não esqueça de verificar suas transações recentes.'
-        }
-      };
-      
-      const notification = notifications[randomType];
-      
-      const newNotification: NotificationProps = {
-        title: notification.title,
-        message: notification.message,
-        type: randomType,
-        priority: randomPriority,
-        actionLabel: 'Ver detalhes',
-        actionCallback: () => console.log('Ação da notificação de teste executada'),
-        showToast: false // Garantir que não seja exibido como toast
-      };
-      
-      addNotification(newNotification);
-      
-      return 'Notificação de teste criada e adicionada ao centro de notificações';
-    }
+    unreadCount: notificationHistory.filter(n => !n.isRead && n.userId === userId).length
   };
-} 
+}
