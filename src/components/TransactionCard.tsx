@@ -105,6 +105,32 @@ export function TransactionCard({
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="date" className="text-sm">Data</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={editForm.date || transaction.date}
+                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                  className="w-full py-2"
+                />
+              </div>
+
+              {transaction.type === 'expense' && (
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate" className="text-sm">Data de Vencimento</Label>
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    value={editForm.dueDate || transaction.dueDate || ''}
+                    onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                    className="w-full py-2"
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="description" className="text-sm">Descrição</Label>
               <Input
