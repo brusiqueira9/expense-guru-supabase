@@ -1,23 +1,27 @@
-import logoOficial from '/icons/logo-oficial.png';
+import logoPreta from '/icons/logopreta.png';
+import logoBranca from '/icons/logobranca.png';
 
 const Logo: React.FC = () => {
   return (
-    <div className="relative flex items-center transition-all duration-300 hover:scale-105">
-      <div className="relative w-20 h-20 flex items-center justify-center">
-        {/* Círculo de borda */}
-        <div className="absolute w-[90%] h-[90%] border border-black/30 rounded-full dark:border-white/60"></div>
+    <div className="flex items-center transition-all duration-300 hover:scale-105 gap-3">
+      {/* Logo - versões diferentes para modo claro e escuro */}
+      <div className="w-16 h-16 flex items-center justify-center">
+        {/* Logo para modo claro (escondida no modo escuro) */}
+        <img 
+          src={logoPreta} 
+          alt="Expense Guru Logo" 
+          className="w-full h-full object-contain block dark:hidden" 
+        />
         
-        {/* Logo */}
-        <div className="relative z-10 w-14 h-14 flex items-center justify-center">
-          <img 
-            src={logoOficial} 
-            alt="Expense Guru Logo" 
-            className="w-full h-full object-contain [filter:none] dark:[filter:brightness(0)_invert(1)]" 
-          />
-        </div>
+        {/* Logo branca para modo escuro (escondida no modo claro) */}
+        <img 
+          src={logoBranca} 
+          alt="Expense Guru Logo" 
+          className="w-full h-full object-contain hidden dark:block" 
+        />
       </div>
       
-      <div className="ml-3 text-left">
+      <div className="text-left">
         <div className="text-2xl font-bold text-black tracking-tight dark:text-white">
           Expense
         </div>

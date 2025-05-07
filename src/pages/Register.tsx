@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Eye, EyeOff, ArrowRight, Lock, Mail, User, Loader2 } from 'lucide-react';
-import Logo from '@/components/Logo';
+import LoginLogo from '@/components/LoginLogo';
 import BackgroundAnimation from '@/components/BackgroundAnimation';
 import { toast } from 'sonner';
 
@@ -73,11 +73,11 @@ export function Register() {
       <BackgroundAnimation />
       
       <div className="relative w-full max-w-md animate-float z-10">
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 z-20 animate-pulse-slow scale-150">
-          <Logo />
-        </div>
-        
-        <Card className="neomorphic p-8 pt-24">
+        <Card className="neomorphic p-8">
+          <div className="flex flex-col items-center justify-center mb-6">
+            <LoginLogo />
+          </div>
+          
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-semibold tracking-wide mb-2 transition-all duration-300 hover:tracking-wider">

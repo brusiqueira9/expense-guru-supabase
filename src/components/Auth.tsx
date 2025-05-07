@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Eye, EyeOff, ArrowRight, Lock, Mail } from 'lucide-react';
-import Logo from './Logo';
+import LoginLogo from './LoginLogo';
 import { motion } from 'framer-motion';
 import BackgroundAnimation from './BackgroundAnimation';
 import { useNotifications } from '../hooks/useNotifications';
@@ -97,10 +97,8 @@ export function Auth() {
       
       <div className="relative w-full max-w-md animate-float z-10">
         <Card className="neomorphic p-8">
-          <div className="flex flex-col items-center justify-center mb-8">
-            <div className="w-32 h-32 flex items-center justify-center">
-              <Logo />
-            </div>
+          <div className="flex flex-col items-center justify-center mb-6">
+            <LoginLogo />
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-8">

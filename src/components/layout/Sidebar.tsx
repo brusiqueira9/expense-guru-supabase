@@ -14,7 +14,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import logoOficial from "/icons/logo-oficial.png";
+import logoPreta from "/icons/logopreta.png";
+import logoBranca from "/icons/logobranca.png";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase";
@@ -128,11 +129,19 @@ export function Sidebar({ onClose }: SidebarProps) {
     <div className="flex h-full w-full flex-col border-r bg-card">
       <div className="flex h-24 items-center gap-3 border-b px-6">
         <div className="relative flex items-center">
-          <div className="w-16 h-16 rounded-full bg-black/10 flex items-center justify-center overflow-hidden dark:bg-white/5">
+          <div className="w-16 h-16 rounded-full bg-black/5 flex items-center justify-center overflow-hidden dark:bg-white/5">
+            {/* Logo para modo claro (escondida no modo escuro) */}
             <img 
-              src={logoOficial} 
+              src={logoPreta} 
               alt="Expense Guru Logo" 
-              className="w-12 h-12 object-contain grayscale contrast-125 dark:brightness-90" 
+              className="w-12 h-12 object-contain block dark:hidden" 
+            />
+            
+            {/* Logo para modo escuro (escondida no modo claro) */}
+            <img 
+              src={logoBranca} 
+              alt="Expense Guru Logo" 
+              className="w-12 h-12 object-contain hidden dark:block" 
             />
           </div>
         </div>
