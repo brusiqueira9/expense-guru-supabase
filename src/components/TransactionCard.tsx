@@ -172,11 +172,11 @@ export function TransactionCard({
                 
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    {format(new Date(transaction.date), "dd 'de' MMMM", { locale: ptBR })}
+                    {format(new Date(transaction.date + 'T00:00:00'), "dd 'de' MMMM", { locale: ptBR })}
                   </p>
                   {transaction.type === 'expense' && transaction.dueDate && (
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      • Vence em {format(new Date(transaction.dueDate), "dd/MM", { locale: ptBR })}
+                      • Vence em {format(new Date(transaction.dueDate + 'T00:00:00'), "dd/MM", { locale: ptBR })}
                     </p>
                   )}
                 </div>
