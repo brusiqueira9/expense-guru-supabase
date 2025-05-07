@@ -142,10 +142,10 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
           <Label htmlFor="type">Tipo</Label>
-          <div className="flex mt-1 space-x-2">
+          <div className="flex space-x-2">
             <LoadingButton
               type="button"
               variant={type === 'expense' ? "default" : "outline"}
@@ -157,7 +157,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
               loading={loading}
             >
               <ArrowDownCircle className="h-4 w-4" />
-              Despesa
+              <span className="text-sm sm:text-base">Despesa</span>
             </LoadingButton>
             <LoadingButton
               type="button"
@@ -170,12 +170,12 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
               loading={loading}
             >
               <ArrowUpCircle className="h-4 w-4" />
-              Receita
+              <span className="text-sm sm:text-base">Receita</span>
             </LoadingButton>
           </div>
         </div>
         
-        <div>
+        <div className="space-y-2">
           <Label htmlFor="amount">Valor</Label>
           <Input
             id="amount"
@@ -186,7 +186,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            className="mt-1"
+            className="w-full"
             disabled={loading}
           />
         </div>

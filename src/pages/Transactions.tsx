@@ -61,14 +61,16 @@ export default function Transactions() {
               Nova Transação
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] w-[95vw]">
+          <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-lg md:text-xl">Nova Transação</DialogTitle>
               <DialogDescription className="text-sm">
                 Adicione uma nova receita ou despesa
               </DialogDescription>
             </DialogHeader>
-            <TransactionForm onSubmit={() => setOpen(false)} />
+            <div className="py-4">
+              <TransactionForm onSubmit={() => setOpen(false)} />
+            </div>
           </DialogContent>
         </Dialog>
       </div>
