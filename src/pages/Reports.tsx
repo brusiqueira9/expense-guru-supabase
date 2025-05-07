@@ -183,6 +183,8 @@ export default function Reports() {
               checked={useMonthFilter}
               onChange={() => setUseMonthFilter(!useMonthFilter)}
               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              aria-label="Usar seleção mensal"
+              title="Usar seleção mensal"
             />
             <Label htmlFor="use-month-filter">Usar seleção mensal</Label>
           </div>
@@ -249,32 +251,32 @@ export default function Reports() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileBarChart className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
+              <FileBarChart className="h-4 w-4 sm:h-5 sm:w-5" />
               Resumo do Período
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Visualize o resumo das transações no período selecionado
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Receitas</p>
-                <p className="text-2xl font-bold text-green-500">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Receitas</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-500">
                   {formatCurrency(reportSummary.totalIncome)}
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Despesas</p>
-                <p className="text-2xl font-bold text-red-500">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Despesas</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-500">
                   {formatCurrency(reportSummary.totalExpense)}
                 </p>
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Saldo</p>
-              <p className={`text-2xl font-bold ${reportSummary.balance >= 0 ? "text-green-500" : "text-red-500"}`}>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Saldo</p>
+              <p className={`text-lg sm:text-xl md:text-2xl font-bold ${reportSummary.balance >= 0 ? "text-green-500" : "text-red-500"}`}>
                 {formatCurrency(reportSummary.balance)}
               </p>
             </div>

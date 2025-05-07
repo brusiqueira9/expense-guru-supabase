@@ -59,14 +59,14 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
         >
           <Card className="overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-green-400 to-green-600"></div>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm text-muted-foreground">Receitas</p>
-                  <h3 className="text-2xl font-bold text-green-500 mt-1">{formatCurrency(summary.totalIncome)}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Receitas</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-green-500 mt-1">{formatCurrency(summary.totalIncome)}</h3>
                 </div>
-                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
-                  <ArrowUp className="h-5 w-5 text-green-500" />
+                <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
+                  <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 </div>
               </div>
             </CardContent>
@@ -80,14 +80,14 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
         >
           <Card className="overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-red-400 to-red-600"></div>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm text-muted-foreground">Despesas</p>
-                  <h3 className="text-2xl font-bold text-red-500 mt-1">{formatCurrency(summary.totalExpense)}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Despesas</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-red-500 mt-1">{formatCurrency(summary.totalExpense)}</h3>
                 </div>
-                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
-                  <ArrowDown className="h-5 w-5 text-red-500" />
+                <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
+                  <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
                 </div>
               </div>
             </CardContent>
@@ -105,20 +105,20 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
                 ? "from-blue-400 to-blue-600" 
                 : "from-yellow-400 to-yellow-600"
             }`}></div>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm text-muted-foreground">Saldo</p>
-                  <h3 className={`text-2xl font-bold mt-1 ${
+                  <p className="text-xs sm:text-sm text-muted-foreground">Saldo</p>
+                  <h3 className={`text-xl sm:text-2xl font-bold mt-1 ${
                     summary.balance >= 0 ? "text-blue-500" : "text-yellow-500"
                   }`}>{formatCurrency(summary.balance)}</h3>
                 </div>
-                <div className={`p-2 rounded-full ${
+                <div className={`p-1.5 sm:p-2 rounded-full ${
                   summary.balance >= 0 
                     ? "bg-blue-100 dark:bg-blue-900/30" 
                     : "bg-yellow-100 dark:bg-yellow-900/30"
                 }`}>
-                  <Wallet className={`h-5 w-5 ${
+                  <Wallet className={`h-4 w-4 sm:h-5 sm:w-5 ${
                     summary.balance >= 0 ? "text-blue-500" : "text-yellow-500"
                   }`} />
                 </div>
@@ -136,8 +136,8 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
         >
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium">Orçamento</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-sm sm:text-base font-medium">Orçamento</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 {summary.totalExpense > 0 && summary.totalIncome > 0 
                   ? `${formatPercentage(budgetProgress)} do orçamento utilizado`
                   : "Sem dados suficientes"}
@@ -145,7 +145,7 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="text-muted-foreground">Despesa / Receita</span>
                   <span className={`font-medium ${
                     budgetStatus === "good" 
@@ -161,7 +161,7 @@ export function FinancialSummary({ showTitle = true }: FinancialSummaryProps) {
                 <Progress 
                   value={budgetProgress} 
                   className={cn(
-                    "h-2",
+                    "h-1.5 sm:h-2",
                     {
                       "[&>div]:bg-green-500": budgetStatus === "good",
                       "[&>div]:bg-amber-500": budgetStatus === "warning",

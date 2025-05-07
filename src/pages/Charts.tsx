@@ -43,7 +43,11 @@ const CHART_ANIMATION = {
 
 interface CustomTooltipProps {
   active?: boolean;
-  payload?: any[];
+  payload?: Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
   label?: string;
 }
 
@@ -71,6 +75,30 @@ const formatMonthYear = (dateString: string) => {
   const year = date.getFullYear().toString().substr(-2);
   return `${month}/${year}`;
 };
+
+interface PaymentStatusData {
+  name: string;
+  value: number;
+  percentage: string;
+}
+
+interface CategoryData {
+  name: string;
+  value: number;
+  percentage: string;
+}
+
+interface MonthlyData {
+  month: string;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
+interface CategoryTimeData {
+  month: string;
+  [key: string]: number | string;
+}
 
 export default function Charts() {
   const { transactions } = useTransactions();
@@ -112,7 +140,7 @@ export default function Charts() {
 
   // Dados para o gráfico de pizza (distribuição de categorias)
   const categoryData = React.useMemo(() => {
-    const data = new Map();
+    const data = new Map<string, number>();
     let total = 0;
     
     transactions.forEach(transaction => {
@@ -121,13 +149,13 @@ export default function Charts() {
           data.set(transaction.category, 0);
         }
         const amount = transaction.amount;
-        data.set(transaction.category, data.get(transaction.category) + amount);
+        data.set(transaction.category, data.get(transaction.category)! + amount);
         total += amount;
       }
     });
     
     return Array.from(data.entries())
-      .map(([name, value]) => ({
+      .map(([name, value]): CategoryData => ({
         name,
         value,
         percentage: (value / total * 100).toFixed(1)
@@ -165,7 +193,7 @@ export default function Charts() {
     return Array.from(monthlyCategories.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([month, categories]) => {
-        const result = {
+        const result: Record<string, any> = {
           month: formatMonthYear(month)
         };
         
@@ -179,7 +207,7 @@ export default function Charts() {
 
   // Dados para o gráfico de status de pagamento
   const paymentStatusData = React.useMemo(() => {
-    const data = {
+    const data: Record<string, number> = {
       paid: 0,
       pending: 0,
       scheduled: 0,
@@ -191,12 +219,36 @@ export default function Charts() {
       }
     });
     
-    return Object.entries(data).map(([status, value]) => ({
+    return Object.entries(data).map(([status, value]): PaymentStatusData => ({
       name: status === 'paid' ? 'Pago' : status === 'pending' ? 'Pendente' : 'Agendado',
       value,
       percentage: (value / Object.values(data).reduce((a, b) => a + b, 0) * 100).toFixed(1)
     }));
   }, [transactions]);
+
+  const TooltipContent = ({ active, payload }: TooltipProps<number, string>) => {
+    if (!active || !payload || !payload.length) return null;
+    const data = payload[0].payload as CategoryData;
+    return (
+      <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 rounded-lg border shadow-sm">
+        <p className="font-medium text-xs sm:text-sm">{data.name}</p>
+        <p className="text-xs sm:text-sm">{formatCurrency(data.value)}</p>
+        <p className="text-[10px] sm:text-xs text-muted-foreground">{data.percentage}%</p>
+      </div>
+    );
+  };
+
+  const PaymentStatusTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+    if (!active || !payload || !payload.length) return null;
+    const data = payload[0].payload as PaymentStatusData;
+    return (
+      <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 rounded-lg border shadow-sm">
+        <p className="font-medium">{data.name}</p>
+        <p>{formatCurrency(data.value)}</p>
+        <p className="text-sm text-muted-foreground">{data.percentage}%</p>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 pb-8">
@@ -267,19 +319,19 @@ export default function Charts() {
         <motion.div {...CHART_ANIMATION} transition={{ delay: 0.4 }}>
           <Card>
             <CardHeader>
-              <CardTitle>Distribuição de Despesas</CardTitle>
-              <CardDescription>Veja como suas despesas estão distribuídas por categoria</CardDescription>
+              <CardTitle className="text-sm sm:text-base">Distribuição de Despesas</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Veja como suas despesas estão distribuídas por categoria</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] relative">
+              <div className="h-[250px] sm:h-[300px] relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={categoryData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={50}
+                      outerRadius={70}
                       paddingAngle={2}
                       dataKey="value"
                     >
@@ -292,33 +344,10 @@ export default function Charts() {
                       ))}
                     </Pie>
                     <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload || !payload.length) return null;
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 rounded-lg border shadow-sm">
-                            <p className="font-medium">{data.name}</p>
-                            <p>{formatCurrency(data.value)}</p>
-                            <p className="text-sm text-muted-foreground">{data.percentage}%</p>
-                          </div>
-                        );
-                      }}
+                      content={TooltipContent}
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="absolute bottom-0 w-full">
-                  <div className="flex flex-wrap justify-center gap-2 text-sm">
-                    {categoryData.map((entry, index) => (
-                      <div key={entry.name} className="flex items-center gap-1">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        />
-                        <span>{entry.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -327,18 +356,31 @@ export default function Charts() {
         <motion.div {...CHART_ANIMATION} transition={{ delay: 0.6 }}>
           <Card>
             <CardHeader>
-              <CardTitle>Evolução das Despesas por Categoria</CardTitle>
-              <CardDescription>Acompanhe como suas despesas por categoria evoluem ao longo do tempo</CardDescription>
+              <CardTitle className="text-sm sm:text-base">Evolução das Despesas por Categoria</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Acompanhe como suas despesas por categoria evoluem ao longo do tempo</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
+              <div className="h-[250px] sm:h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={categoryTimeData}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                    <XAxis 
+                      dataKey="month" 
+                      tick={{ fontSize: 10 }}
+                      tickMargin={5}
+                    />
+                    <YAxis 
+                      tickFormatter={(value) => formatCurrency(value)} 
+                      tick={{ fontSize: 10 }}
+                      tickMargin={5}
+                    />
                     <Tooltip content={<CustomTooltip />} />
-                    <Legend />
+                    <Legend 
+                      wrapperStyle={{ 
+                        fontSize: '10px',
+                        paddingTop: '10px'
+                      }}
+                    />
                     {categoryData.map((category, index) => (
                       <Area
                         key={category.name}
@@ -385,17 +427,7 @@ export default function Charts() {
                       ))}
                     </Pie>
                     <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload || !payload.length) return null;
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-2 rounded-lg border shadow-sm">
-                            <p className="font-medium">{data.name}</p>
-                            <p>{formatCurrency(data.value)}</p>
-                            <p className="text-sm text-muted-foreground">{data.percentage}%</p>
-                          </div>
-                        );
-                      }}
+                      content={PaymentStatusTooltip}
                     />
                   </PieChart>
                 </ResponsiveContainer>

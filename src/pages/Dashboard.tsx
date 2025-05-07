@@ -161,81 +161,58 @@ export default function Dashboard() {
       {/* Resumo do Mês Atual */}
       <Card className="hover:shadow-lg transition-shadow">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg md:text-xl">
+          <CardTitle className="text-base sm:text-lg md:text-xl">
             Resumo de {currentMonthDisplay}
           </CardTitle>
-          <CardDescription className="text-xs md:text-sm">
+          <CardDescription className="text-[10px] sm:text-xs md:text-sm">
             Comparação com {previousMonthDisplay}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="space-y-1">
-              <p className="text-xs md:text-sm font-medium text-muted-foreground">Receitas</p>
-              <p className="text-xl md:text-2xl font-bold text-green-500">
+              <p className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Receitas</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-500">
                 {formatCurrency(currentMonthIncome)}
               </p>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {incomeVariation >= 0 ? (
                     <span className="text-green-500 flex items-center gap-1">
-                      <TrendingUpIcon className="h-3 w-3" />
+                      <TrendingUpIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                       +{incomeVariation.toFixed(1)}%
                     </span>
                   ) : (
                     <span className="text-red-500 flex items-center gap-1">
-                      <TrendingDownIcon className="h-3 w-3" />
+                      <TrendingDownIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                       {incomeVariation.toFixed(1)}%
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground">vs. mês anterior</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">vs. mês anterior</p>
               </div>
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs md:text-sm font-medium text-muted-foreground">Despesas</p>
-              <p className="text-xl md:text-2xl font-bold text-red-500">
+              <p className="text-[10px] sm:text-xs md:text-sm font-medium text-muted-foreground">Despesas</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-500">
                 {formatCurrency(currentMonthExpense)}
               </p>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {expenseVariation <= 0 ? (
                     <span className="text-green-500 flex items-center gap-1">
-                      <TrendingDownIcon className="h-3 w-3" />
+                      <TrendingDownIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                       {Math.abs(expenseVariation).toFixed(1)}%
                     </span>
                   ) : (
                     <span className="text-red-500 flex items-center gap-1">
-                      <TrendingUpIcon className="h-3 w-3" />
+                      <TrendingUpIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                       +{expenseVariation.toFixed(1)}%
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground">vs. mês anterior</p>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-xs md:text-sm font-medium text-muted-foreground">Saldo</p>
-              <p className={`text-xl md:text-2xl font-bold ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {formatCurrency(currentMonthBalance)}
-              </p>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {balanceVariation >= 0 ? (
-                    <span className="text-green-500 flex items-center gap-1">
-                      <TrendingUpIcon className="h-3 w-3" />
-                      +{balanceVariation.toFixed(1)}%
-                    </span>
-                  ) : (
-                    <span className="text-red-500 flex items-center gap-1">
-                      <TrendingDownIcon className="h-3 w-3" />
-                      {balanceVariation.toFixed(1)}%
-                    </span>
-                  )}
-                </p>
-                <p className="text-xs text-muted-foreground">vs. mês anterior</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">vs. mês anterior</p>
               </div>
             </div>
           </div>
@@ -244,24 +221,24 @@ export default function Dashboard() {
 
       {/* Cards Principais */}
       <motion.div
-        className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
         variants={container}
       >
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">
+              <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium">
                 Saldo do Mês
               </CardTitle>
-              <WalletIcon className={`h-4 w-4 ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+              <WalletIcon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-lg md:text-2xl font-bold ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              <div className={`text-base sm:text-lg md:text-2xl font-bold ${currentMonthBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {formatCurrency(currentMonthBalance)}
               </div>
-              <div className="flex items-center gap-2">
-                <ActivityIcon className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <ActivityIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-muted-foreground" />
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   Receitas - Despesas
                 </p>
               </div>
@@ -272,17 +249,17 @@ export default function Dashboard() {
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">
+              <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium">
                 Receitas do Mês
               </CardTitle>
-              <ArrowUpIcon className="h-4 w-4 text-green-500" />
+              <ArrowUpIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg md:text-2xl font-bold text-green-500">
+              <div className="text-base sm:text-lg md:text-2xl font-bold text-green-500">
                 {formatCurrency(currentMonthIncome)}
               </div>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {topIncomes.length} receitas registradas
                 </p>
               </div>
@@ -293,17 +270,17 @@ export default function Dashboard() {
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">
+              <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium">
                 Despesas do Mês
               </CardTitle>
-              <ArrowDownIcon className="h-4 w-4 text-red-500" />
+              <ArrowDownIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg md:text-2xl font-bold text-red-500">
+              <div className="text-base sm:text-lg md:text-2xl font-bold text-red-500">
                 {formatCurrency(currentMonthExpense)}
               </div>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {topExpenses.length} despesas registradas
                 </p>
               </div>
@@ -314,16 +291,16 @@ export default function Dashboard() {
         <motion.div variants={item}>
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium">
+              <CardTitle className="text-[10px] sm:text-xs md:text-sm font-medium">
                 Despesas Pagas
               </CardTitle>
-              <CheckCircleIcon className="h-4 w-4 text-blue-500" />
+              <CheckCircleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg md:text-2xl font-bold text-blue-500">
+              <div className="text-base sm:text-lg md:text-2xl font-bold text-blue-500">
                 {totalExpenses ? (paidPercentage).toFixed(1) : 0}%
               </div>
-              <Progress value={paidPercentage} className="h-2">
+              <Progress value={paidPercentage} className="h-1.5 sm:h-2">
                 <div 
                   className="h-full bg-blue-500 transition-all" 
                   style={{ width: `${paidPercentage}%` }} 
