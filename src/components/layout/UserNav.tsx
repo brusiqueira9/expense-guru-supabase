@@ -27,6 +27,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button as UiButton } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import { performLogout } from "@/lib/auth";
 
 export function UserNav() {
   const { user, signOut } = useAuth();
@@ -66,8 +68,14 @@ export function UserNav() {
   };
 
   const handleLogout = async () => {
-    await signOut();
-    navigate("/auth");
+    try {
+      await signOut();
+      // Usar location.href para garantir um redirecionamento completo
+      window.location.href = "/auth";
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast.error('Erro ao sair. Tente novamente.');
+    }
   };
 
   // Lista de atalhos do sistema
@@ -102,6 +110,19 @@ export function UserNav() {
         className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
       >
         <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-[18px] md:w-[18px]" />
+      </Button>
+      
+      {/* Botão de Logout direto */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => {
+          window.location.href = "/logout";
+        }}
+        title="Sair"
+        className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+      >
+        <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-[18px] md:w-[18px]" />
       </Button>
       
       {/* Ajuda - Atalhos de teclado */}
@@ -161,7 +182,7 @@ export function UserNav() {
             </DropdownMenuCheckboxItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout}>
+          <DropdownMenuItem onClick={() => performLogout()}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sair</span>
           </DropdownMenuItem>

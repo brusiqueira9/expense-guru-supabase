@@ -16,6 +16,7 @@ import { useAuth } from "./hooks/useAuth";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { Register } from "./pages/Register";
 import TestPage from "./pages/TestPage";
+import Logout from "./pages/Logout";
 import { useNotifications } from "./hooks/useNotifications";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
@@ -65,6 +66,7 @@ function App() {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/test" element={<TestPage />} />
+                <Route path="/logout" element={<Logout />} />
                 <Route
                   path="/"
                   element={

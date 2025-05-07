@@ -114,6 +114,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Erro ao fazer logout:', error.message);
         throw error;
       }
+      
+      // Limpar explicitamente o estado do usuário e da sessão
+      setUser(null);
+      setSession(null);
+      
+      // Limpar dados locais, se necessário
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Forçar a atualização
+      window.dispatchEvent(new Event('auth-signout'));
+      
     } finally {
       setLoading(false);
     }

@@ -73,11 +73,11 @@ export function Register() {
       <BackgroundAnimation />
       
       <div className="relative w-full max-w-md animate-float z-10">
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 z-20 animate-pulse-slow">
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 z-20 animate-pulse-slow scale-150">
           <Logo />
         </div>
         
-        <Card className="neomorphic p-8 pt-16">
+        <Card className="neomorphic p-8 pt-24">
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-semibold tracking-wide mb-2 transition-all duration-300 hover:tracking-wider">

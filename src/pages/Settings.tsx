@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SettingsIcon, Lock, Palette, Trash2, LightbulbIcon, EyeOff, EyeIcon } from "lucide-react";
+import { SettingsIcon, Lock, Palette, Trash2, LightbulbIcon, EyeOff, EyeIcon, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+import { performLogout } from "@/lib/auth";
 
 interface UserPreferences {
   id?: string;
@@ -269,7 +270,108 @@ export default function Settings() {
   };
 
   const handleToggleDarkMode = async (checked: boolean) => {
-    setPreferences(prev => ({ ...prev, dark_mode: checked }));
+    try {
+      // Atualizar o estado local primeiro
+      setPreferences(prev => ({ ...prev, dark_mode: checked }));
+      
+      // Feedback visual direto
+      const root = window.document.documentElement;
+      if (checked) {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
+      
+      // Efeito visual de transição
+      const overlay = document.createElement("div");
+      overlay.className = "fixed inset-0 bg-background z-50 pointer-events-none";
+      overlay.style.opacity = "0";
+      document.body.appendChild(overlay);
+      
+      // Animação de fade in/out
+      setTimeout(() => {
+        overlay.style.transition = "opacity 300ms ease";
+        overlay.style.opacity = "0.5";
+        setTimeout(() => {
+          overlay.style.opacity = "0";
+          setTimeout(() => {
+            document.body.removeChild(overlay);
+          }, 300);
+        }, 150);
+      }, 0);
+      
+      // Disparar evento para ativar animações do tema
+      window.dispatchEvent(new Event('themeChange'));
+      
+      // Salvar diretamente no banco de dados, sem depender do estado atual
+      if (!user?.id) {
+        toast.error('Usuário não autenticado');
+        return;
+      }
+
+      const { data: existingData, error: fetchError } = await supabase
+        .from('user_preferences')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Erro ao verificar preferências existentes:', fetchError);
+        throw fetchError;
+      }
+
+      // Preparar os dados a serem salvos
+      const preferenceData = {
+        user_id: user.id,
+        dark_mode: checked,  // Usar o valor passado diretamente
+        updated_at: new Date().toISOString()
+      };
+
+      let error;
+      if (existingData?.id) {
+        // Atualizar o registro existente
+        const { error: updateError } = await supabase
+          .from('user_preferences')
+          .update(preferenceData)
+          .eq('id', existingData.id);
+        error = updateError;
+      } else {
+        // Obter os outros valores de preferência do estado atual
+        const fullPreferenceData = {
+          ...preferences,  // Inclui todos os valores atuais
+          ...preferenceData,  // Substitui dark_mode com o valor correto
+        };
+        
+        // Inserir um novo registro
+        const { error: insertError } = await supabase
+          .from('user_preferences')
+          .insert([fullPreferenceData]);
+        error = insertError;
+      }
+
+      if (error) {
+        console.error('Erro ao salvar modo escuro:', error);
+        throw error;
+      }
+      
+      // Mensagem de sucesso
+      toast.success(checked ? "Modo escuro ativado" : "Modo claro ativado");
+      
+      // Recarregar as preferências para sincronizar
+      await fetchUserPreferences();
+    } catch (error: any) {
+      console.error('Erro ao salvar modo escuro:', error);
+      toast.error('Erro ao salvar configuração: ' + (error.message || 'Erro desconhecido'));
+      
+      // Reverter a interface em caso de erro
+      setPreferences(prev => ({ ...prev, dark_mode: !checked }));
+      const root = window.document.documentElement;
+      if (!checked) {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
+    }
   };
 
   return (
@@ -380,12 +482,26 @@ export default function Settings() {
                   id="dark-mode"
                   checked={preferences.dark_mode}
                   onCheckedChange={handleToggleDarkMode}
+                  className="transition-transform data-[state=checked]:scale-105"
                 />
               </div>
 
-              <Button onClick={handleSaveSettings} disabled={loading}>
-                Salvar aparência
-              </Button>
+              <div className="flex flex-col gap-4 mt-6 rounded-lg bg-primary/5 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <div className="w-4 h-4 rounded-full bg-primary"></div>
+                  Pré-visualização do tema
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Card className="p-3 transition-all">
+                    <p className="font-medium text-sm">Texto normal</p>
+                    <p className="text-xs text-muted-foreground">Texto secundário</p>
+                  </Card>
+                  <Card className="p-3 bg-primary text-primary-foreground transition-all">
+                    <p className="font-medium text-sm">Cor primária</p>
+                    <p className="text-xs text-primary-foreground/80">Texto secundário</p>
+                  </Card>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -541,18 +657,33 @@ export default function Settings() {
                   Zona de Perigo
                 </h3>
 
-                <p className="text-sm text-muted-foreground mb-4">
-                  Ao excluir sua conta, todos os seus dados serão permanentemente removidos.
-                  Esta ação não pode ser desfeita.
-                </p>
-
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteAccount}
-                  disabled={loading}
-                >
-                  Excluir Conta
-                </Button>
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <Button
+                      variant="outline"
+                      className="w-full border-destructive/20 text-destructive hover:bg-destructive/10" 
+                      onClick={() => performLogout()}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sair da Conta
+                    </Button>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Ao excluir sua conta, todos os seus dados serão permanentemente removidos.
+                      Esta ação não pode ser desfeita.
+                    </p>
+                    
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteAccount}
+                      disabled={loading}
+                    >
+                      Excluir Conta
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

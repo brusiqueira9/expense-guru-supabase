@@ -62,10 +62,22 @@ export function useAuth() {
   const signOut = async () => {
     try {
       setError(null);
+      // Primeiro, tentar fazer o logout no supabase
       const { error: signOutError } = await supabase.auth.signOut();
       if (signOutError) throw signOutError;
+      
+      // Limpar quaisquer tokens de sessão armazenados localmente
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Atualizar o estado local
+      setSession(null);
+      setUser(null);
+      
+      // Forçar um redirecionamento para a página de autenticação
+      return true;
     } catch (err: any) {
       setError(err.message);
+      console.error('Erro ao fazer logout:', err);
       throw err;
     }
   };

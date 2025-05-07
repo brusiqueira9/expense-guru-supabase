@@ -14,9 +14,11 @@ import {
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import logo from "@/assets/money.png";
+import logoOficial from "/icons/logo-oficial.png";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { supabase } from "@/lib/supabase";
+import { performLogout } from "@/lib/auth";
 
 const navigation = [
   { 
@@ -86,6 +88,8 @@ export function Sidebar({ onClose }: SidebarProps) {
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Redirecionar para a página de login após o logout
+      window.location.href = '/auth';
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
@@ -122,10 +126,18 @@ export function Sidebar({ onClose }: SidebarProps) {
 
   return (
     <div className="flex h-full w-full flex-col border-r bg-card">
-      <div className="flex h-16 items-center gap-3 border-b px-6">
-        <img src={logo} alt="Expense Guru Logo" className="h-8 w-8" />
+      <div className="flex h-24 items-center gap-3 border-b px-6">
+        <div className="relative flex items-center">
+          <div className="w-16 h-16 rounded-full bg-black/10 flex items-center justify-center overflow-hidden dark:bg-white/5">
+            <img 
+              src={logoOficial} 
+              alt="Expense Guru Logo" 
+              className="w-12 h-12 object-contain grayscale contrast-125 dark:brightness-90" 
+            />
+          </div>
+        </div>
         <div>
-          <h1 className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             Expense Guru
           </h1>
           <p className="text-xs text-muted-foreground">Controle Financeiro</p>
@@ -175,13 +187,13 @@ export function Sidebar({ onClose }: SidebarProps) {
       </ScrollArea>
 
       <div className="border-t p-3">
-        <button
-          onClick={handleSignOut}
+        <a
+          href="/logout"
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
         >
           <LogOut className="h-4 w-4 shrink-0" />
           <span className="truncate">Sair</span>
-        </button>
+        </a>
       </div>
     </div>
   );

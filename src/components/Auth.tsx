@@ -96,11 +96,13 @@ export function Auth() {
       <BackgroundAnimation />
       
       <div className="relative w-full max-w-md animate-float z-10">
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 z-20 animate-pulse-slow">
-          <Logo />
-        </div>
-        
-        <Card className="neomorphic p-8 pt-16">
+        <Card className="neomorphic p-8">
+          <div className="flex flex-col items-center justify-center mb-8">
+            <div className="w-32 h-32 flex items-center justify-center">
+              <Logo />
+            </div>
+          </div>
+          
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-semibold tracking-wide mb-2 transition-all duration-300 hover:tracking-wider">

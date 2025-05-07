@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { createContext, useContext } from "react"
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +31,7 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const { user } = useAuth();
+  const [themeLoaded, setThemeLoaded] = useState(false);
 
   useEffect(() => {
     // Adicionar classe de transição ao documento
@@ -41,7 +42,7 @@ export function ThemeProvider({
       document.documentElement.classList.remove('theme-transition');
       window.setTimeout(() => {
         document.documentElement.classList.add('theme-transition');
-      }, 300);
+      }, 500); // Aumentado para uma transição mais suave
     };
     
     // Observar mudanças de tema
@@ -51,20 +52,30 @@ export function ThemeProvider({
     const style = document.createElement('style');
     style.textContent = `
       .theme-transition * {
-        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+        transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease !important;
       }
       
       /* Melhorias de cores para dark mode */
       .dark {
-        --background: 240 10% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 240 10% 5.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 240 10% 5.9%;
-        --popover-foreground: 0 0% 98%;
-        --muted: 240 5% 15.9%;
-        --muted-foreground: 240 5% 64.9%;
-        --border: 240 5% 15%;
+        --background: 222 47% 4%;
+        --foreground: 210 40% 98%;
+        --card: 222 47% 6%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222 47% 6%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 217 91.2% 59.8%;
+        --primary-foreground: 222 47% 1%;
+        --secondary: 217 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217 32.6% 12%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 62.8% 50.6%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 217 32.6% 17.5%;
+        --input: 217 32.6% 17.5%;
+        --ring: 224.3 76.3% 48%;
       }
       
       /* Estilo para scrollbar */
@@ -75,6 +86,7 @@ export function ThemeProvider({
       
       ::-webkit-scrollbar-track {
         background: var(--background);
+        border-radius: 4px;
       }
       
       ::-webkit-scrollbar-thumb {
@@ -93,6 +105,18 @@ export function ThemeProvider({
       .dark ::-webkit-scrollbar-thumb:hover {
         background: hsl(var(--muted-foreground));
       }
+      
+      /* Melhoria nas sombras do dark mode */
+      .dark .shadow-md,
+      .dark .shadow-lg,
+      .dark .shadow-xl {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+      }
+      
+      /* Melhores contrastes para gráficos e elementos visuais */
+      .dark .text-muted-foreground {
+        color: hsl(215 20.2% 75.1%) !important;
+      }
     `;
     document.head.appendChild(style);
 
@@ -100,10 +124,23 @@ export function ThemeProvider({
     const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const root = window.document.documentElement;
     
+    // Tentar recuperar do localStorage primeiro para evitar flash
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme === 'dark') {
+      root.classList.add("dark");
+    } else if (storedTheme === 'light') {
+      root.classList.remove("dark");
+    }
+    
     // Função para carregar as preferências do usuário
     const loadUserPreferences = async () => {
-      if (user?.id) {
-        try {
+      // Definir um timeout para garantir que tentamos carregar pelo menos uma vez
+      const timeoutId = setTimeout(() => {
+        setThemeLoaded(true);
+      }, 2000);
+      
+      try {
+        if (user?.id) {
           const { data, error } = await supabase
             .from('user_preferences')
             .select('dark_mode')
@@ -113,6 +150,9 @@ export function ThemeProvider({
           if (error) throw error;
           
           if (data && data.dark_mode !== undefined) {
+            // Salvar no localStorage para carregamento rápido em acessos futuros
+            localStorage.setItem('theme', data.dark_mode ? 'dark' : 'light');
+            
             if (data.dark_mode) {
               root.classList.add("dark");
             } else {
@@ -123,29 +163,38 @@ export function ThemeProvider({
             window.dispatchEvent(new Event('themeChange'));
           } else {
             // Se não houver preferência do usuário, use a preferência do sistema
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            
             if (isDarkMode) {
               root.classList.add("dark");
             } else {
               root.classList.remove("dark");
             }
           }
-        } catch (error) {
-          console.error("Erro ao carregar preferências:", error);
-          
-          // Fallback para a preferência do sistema
-          if (isDarkMode) {
-            root.classList.add("dark");
-          } else {
-            root.classList.remove("dark");
+        } else {
+          // Para usuários não logados, use a preferência do sistema se não houver localStorage
+          if (!storedTheme) {
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            
+            if (isDarkMode) {
+              root.classList.add("dark");
+            } else {
+              root.classList.remove("dark");
+            }
           }
         }
-      } else {
-        // Para usuários não logados, use a preferência do sistema
+      } catch (error) {
+        console.error("Erro ao carregar preferências:", error);
+        
+        // Fallback para a preferência do sistema
         if (isDarkMode) {
           root.classList.add("dark");
         } else {
           root.classList.remove("dark");
         }
+      } finally {
+        clearTimeout(timeoutId);
+        setThemeLoaded(true);
       }
     };
     
@@ -157,8 +206,10 @@ export function ThemeProvider({
       if (!user?.id) { // Apenas para usuários não logados
         if (e.matches) {
           root.classList.add("dark");
+          localStorage.setItem('theme', 'dark');
         } else {
           root.classList.remove("dark");
+          localStorage.setItem('theme', 'light');
         }
         
         // Disparar evento de mudança de tema
