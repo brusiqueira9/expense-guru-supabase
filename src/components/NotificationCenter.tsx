@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotifications, NotificationItem, PriorityLevel } from '@/hooks/useNotifications';
 import { 
   Bell, 
@@ -243,31 +243,51 @@ export function NotificationCenter({
     clearAllNotifications();
     setLocalNotifications([]);
     setShowClearConfirm(false);
+    
+    // Fechar o painel de notificações após limpar
+    setTimeout(() => {
+      onClose();
+    }, 300);
   };
 
   return (
     <Sheet open={show} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:w-[400px] p-0">
-        <SheetHeader className="px-3 sm:px-4 py-2 sm:py-3 border-b">
+      <SheetContent className="w-full sm:w-[400px] p-0 overflow-hidden">
+        <SheetHeader className="px-3 sm:px-4 py-3 border-b sticky top-0 bg-background z-10">
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-sm sm:text-base md:text-lg">Notificações</SheetTitle>
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <SheetTitle className="text-sm sm:text-base md:text-lg flex items-center gap-2">
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+              Notificações
+            </SheetTitle>
+            <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9"
+                className="h-8 w-8 md:h-9 md:w-9 rounded-full"
                 onClick={() => setShowSettings(true)}
+                aria-label="Configurações de notificações"
               >
-                <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                <Settings className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9"
+                className="h-8 w-8 md:h-9 md:w-9 rounded-full"
                 onClick={() => setShowClearConfirm(true)}
+                aria-label="Limpar notificações"
               >
-                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                <Trash2 className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 md:h-9 md:w-9 rounded-full"
+                  aria-label="Fechar painel de notificações"
+                >
+                  <X className="h-4 w-4 md:h-5 md:w-5" />
+                </Button>
+              </SheetClose>
             </div>
           </div>
         </SheetHeader>
@@ -275,28 +295,28 @@ export function NotificationCenter({
         <div className="p-2 sm:p-3 border-b">
           <Tabs defaultValue="all" value={filter} onValueChange={setFilter} className="w-full">
             <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="all" className="text-[10px] sm:text-xs md:text-sm">Todas</TabsTrigger>
-              <TabsTrigger value="unread" className="text-[10px] sm:text-xs md:text-sm">Não lidas</TabsTrigger>
-              <TabsTrigger value="read" className="text-[10px] sm:text-xs md:text-sm">Lidas</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs md:text-sm">Todas</TabsTrigger>
+              <TabsTrigger value="unread" className="text-xs md:text-sm">Não lidas</TabsTrigger>
+              <TabsTrigger value="read" className="text-xs md:text-sm">Lidas</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        <div className="p-3 border-b">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+        <div className="p-2 sm:p-3 border-b">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 md:h-8 text-xs md:text-sm">
-                    <Filter className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <Button variant="outline" size="sm" className="h-8 text-xs md:text-sm">
+                    <Filter className="h-3.5 w-3.5 mr-1.5" />
                     Filtros
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuContent align="start" className="w-56 z-50">
                   <DropdownMenuLabel className="text-xs">Tipo</DropdownMenuLabel>
                   <div className="p-2">
                     {["success", "error", "warning", "info", "transaction", "goal", "reminder"].map((type) => (
-                      <div key={type} className="flex items-center space-x-2 py-1">
+                      <div key={type} className="flex items-center space-x-2 py-1.5">
                         <Checkbox
                           id={`type-${type}`}
                           checked={selectedTypes.includes(type)}
@@ -316,7 +336,7 @@ export function NotificationCenter({
                   <DropdownMenuLabel className="text-xs">Prioridade</DropdownMenuLabel>
                   <div className="p-2">
                     {["high", "medium", "low"].map((priority) => (
-                      <div key={priority} className="flex items-center space-x-2 py-1">
+                      <div key={priority} className="flex items-center space-x-2 py-1.5">
                         <Checkbox
                           id={`priority-${priority}`}
                           checked={selectedPriorities.includes(priority as PriorityLevel)}
@@ -336,10 +356,10 @@ export function NotificationCenter({
               </DropdownMenu>
 
               <Select value={sortBy} onValueChange={(value: "date" | "priority") => setSortBy(value)}>
-                <SelectTrigger className="h-7 md:h-8 text-xs md:text-sm">
+                <SelectTrigger className="h-8 text-xs md:text-sm w-[110px]">
                   <SelectValue placeholder="Ordenar por" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   <SelectItem value="date" className="text-xs">Data</SelectItem>
                   <SelectItem value="priority" className="text-xs">Prioridade</SelectItem>
                 </SelectContent>
@@ -349,21 +369,22 @@ export function NotificationCenter({
             <Button
               variant="outline"
               size="icon"
-              className="h-7 w-7 md:h-8 md:w-8"
+              className="h-8 w-8 rounded-md"
               onClick={() => setViewMode(prev => prev === "list" ? "grid" : "list")}
+              aria-label={viewMode === "list" ? "Alternar para visualização em grade" : "Alternar para visualização em lista"}
             >
-              <LayoutGrid className="h-3 w-3 md:h-4 md:w-4" />
+              <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-180px)]">
+        <ScrollArea className="flex-1 h-[calc(100vh-230px)] sm:h-[calc(100vh-200px)]">
           <div className="p-2 sm:p-3">
             <AnimatePresence>
               {filteredNotifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
-                  <BellOff className="h-6 w-6 sm:h-8 sm:w-8 md:h-12 md:w-12 text-muted-foreground mb-1.5 sm:mb-2" />
-                  <p className="text-xs sm:text-sm md:text-base text-muted-foreground">Nenhuma notificação encontrada</p>
+                  <BellOff className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">Nenhuma notificação encontrada</p>
                 </div>
               ) : (
                 filteredNotifications.map((notification) => (
@@ -379,14 +400,14 @@ export function NotificationCenter({
           </div>
         </ScrollArea>
 
-        <SheetFooter className="p-2 sm:p-3 border-t">
+        <SheetFooter className="p-2 sm:p-3 border-t sticky bottom-0 bg-background z-10">
           <Button
             variant="outline"
-            className="w-full text-[10px] sm:text-xs md:text-sm"
+            className="w-full h-10 text-xs md:text-sm flex items-center justify-center"
             onClick={markAllAsRead}
             disabled={!filteredNotifications.some(n => !n.isRead)}
           >
-            <CheckSquare className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 mr-1.5 sm:mr-2" />
+            <CheckSquare className="h-4 w-4 mr-2" />
             Marcar todas como lidas
           </Button>
         </SheetFooter>
@@ -427,6 +448,18 @@ export function NotificationCenter({
                       }}
                     />
                     <Label htmlFor="showGoalUpdates" className="text-[10px] sm:text-xs">Atualizações de Metas</Label>
+                  </div>
+                  <div className="flex items-center space-x-1.5 sm:space-x-2">
+                    <Checkbox
+                      id="showFinancialTips"
+                      checked={notificationPreferences.showFinancialTips}
+                      onCheckedChange={(checked) => {
+                        updateNotificationPreferences({
+                          showFinancialTips: checked as boolean
+                        });
+                      }}
+                    />
+                    <Label htmlFor="showFinancialTips" className="text-[10px] sm:text-xs">Dicas Financeiras</Label>
                   </div>
                 </div>
               </div>
@@ -478,6 +511,13 @@ export function NotificationCenter({
 export function NotificationButton({ onClick }: { onClick: () => void }) {
   const { unreadCount } = useNotifications();
   const { user } = useAuth();
+  
+  // Usar useState e useEffect para evitar problemas de renderização
+  const [currentCount, setCurrentCount] = useState(0);
+  
+  useEffect(() => {
+    setCurrentCount(unreadCount);
+  }, [unreadCount]);
 
   if (!user) return null;
 
@@ -489,12 +529,12 @@ export function NotificationButton({ onClick }: { onClick: () => void }) {
       className="relative h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
     >
       <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-[18px] md:w-[18px]" />
-      {unreadCount > 0 && (
+      {currentCount > 0 && (
         <Badge
           variant="destructive"
           className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 p-0 flex items-center justify-center text-[8px] sm:text-[10px] md:text-xs"
         >
-          {unreadCount > 99 ? "99+" : unreadCount}
+          {currentCount > 99 ? "99+" : currentCount}
         </Badge>
       )}
     </Button>

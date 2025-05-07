@@ -14,7 +14,8 @@ import {
   CalendarClock, 
   RefreshCw,
   Pencil,
-  Trash2
+  Trash2,
+  ChevronDown
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -75,9 +76,9 @@ export function TransactionCard({
               transaction.type === "income" ? "bg-green-500" : "bg-red-500"
             )}
           />
-          <div className="flex flex-1 items-center justify-between p-4">
+          <div className="flex flex-1 items-start justify-between p-3 sm:p-4 flex-col sm:flex-row gap-2 sm:gap-4">
             {editingId === transaction.id ? (
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 space-y-4 w-full">
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <Input
@@ -193,114 +194,129 @@ export function TransactionCard({
               </div>
             ) : (
               <>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                  {transaction.type === "income" ? (
-                    <ArrowUpCircle className="h-5 w-5 text-green-500 shrink-0" />
-                  ) : (
-                    <ArrowDownCircle className="h-5 w-5 text-red-500 shrink-0" />
-                  )}
-                  <div className={cn(
-                    "font-medium",
-                    "text-foreground"
-                  )}>
-                    <h3 className="font-medium">
-                      {transaction.description || transaction.category}
-                    </h3>
-                    {transaction.recurrence && transaction.recurrence !== 'none' && (
-                      <Badge variant="outline" className="flex items-center gap-1 text-xs">
-                        <RefreshCw className="h-3 w-3" />
-                        {transaction.recurrence === 'daily' && 'Diária'}
-                        {transaction.recurrence === 'weekly' && 'Semanal'}
-                        {transaction.recurrence === 'monthly' && 'Mensal'}
-                        {transaction.recurrence === 'yearly' && 'Anual'}
+                <div className="flex-1 flex flex-col gap-2 w-full">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    {transaction.type === "income" ? (
+                      <ArrowUpCircle className="h-5 w-5 text-green-500 shrink-0" />
+                    ) : (
+                      <ArrowDownCircle className="h-5 w-5 text-red-500 shrink-0" />
+                    )}
+                    <div className={cn(
+                      "font-medium",
+                      "text-foreground flex-1"
+                    )}>
+                      <h3 className="font-medium line-clamp-1">
+                        {transaction.description || transaction.category}
+                      </h3>
+                      {transaction.recurrence && transaction.recurrence !== 'none' && (
+                        <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                          <RefreshCw className="h-3 w-3" />
+                          {transaction.recurrence === 'daily' && 'Diária'}
+                          {transaction.recurrence === 'weekly' && 'Semanal'}
+                          {transaction.recurrence === 'monthly' && 'Mensal'}
+                          {transaction.recurrence === 'yearly' && 'Anual'}
+                        </Badge>
+                      )}
+                      {transaction.parentTransactionId && (
+                        <Badge variant="outline" className="text-xs">Recorrente</Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
+                      <Badge variant="outline" className={cn(
+                        "w-fit",
+                        transaction.type === "income" ? "text-green-500" : "text-red-500"
+                      )}>
+                        {transaction.category}
                       </Badge>
-                    )}
-                    {transaction.parentTransactionId && (
-                      <Badge variant="outline" className="text-xs">Recorrente</Badge>
-                    )}
+                      {isExpense && transaction.paymentStatus && (
+                        <PaymentStatusBadge status={transaction.paymentStatus} />
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={cn(
-                      "w-fit",
+                  
+                  <div className="flex items-center justify-between">
+                    <div className={cn(
+                      "text-lg font-bold",
                       transaction.type === "income" ? "text-green-500" : "text-red-500"
                     )}>
-                      {transaction.category}
-                    </Badge>
-                    {isExpense && transaction.paymentStatus && (
-                      <PaymentStatusBadge status={transaction.paymentStatus} />
-                    )}
+                      {formatCurrency(transaction.amount)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {formatDate(transaction.date)}
+                    </div>
                   </div>
+                  
+                  {isExpense && (
+                    <div className="flex items-center bg-muted/40 rounded-lg p-1.5 pl-3">
+                      <div className="flex-1 text-sm text-muted-foreground">
+                        <span className="sm:inline">Status:</span> <span className="font-medium">{transaction.paymentStatus === 'paid' ? 'Pago' : transaction.paymentStatus === 'scheduled' ? 'Agendado' : 'Pendente'}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 rounded-md text-muted-foreground hover:text-primary flex items-center gap-1 touch-manipulation px-2 md:px-3 active:scale-95 transition-transform"
+                            >
+                              <span className="inline text-xs md:text-sm">Alterar</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent 
+                            align="end" 
+                            sideOffset={8} 
+                            className="min-w-[180px] z-[999]"
+                            avoidCollisions={true}
+                            collisionPadding={16}
+                            sticky="always"
+                          >
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange('paid')}
+                              className="gap-2 py-3 cursor-pointer text-sm hover:bg-green-50 dark:hover:bg-green-900/20 active:bg-green-100 dark:active:bg-green-900/40"
+                            >
+                              <Check className="h-4 w-4 text-green-500" />
+                              <span>Marcar como pago</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange('pending')}
+                              className="gap-2 py-3 cursor-pointer text-sm hover:bg-yellow-50 dark:hover:bg-yellow-900/20 active:bg-yellow-100 dark:active:bg-yellow-900/40"
+                            >
+                              <Clock className="h-4 w-4 text-yellow-500" />
+                              <span>Marcar como pendente</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange('scheduled')}
+                              className="gap-2 py-3 cursor-pointer text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 active:bg-blue-100 dark:active:bg-blue-900/40"
+                            >
+                              <CalendarClock className="h-4 w-4 text-blue-500" />
+                              <span>Marcar como agendado</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "text-lg font-bold",
-                    transaction.type === "income" ? "text-green-500" : "text-red-500"
-                  )}>
-                    {formatCurrency(transaction.amount)}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {formatDate(transaction.date)}
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  {isExpense && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-full text-muted-foreground hover:text-primary"
-                        >
-                          {transaction.paymentStatus === 'paid' ? (
-                            <Check className="h-4 w-4" />
-                          ) : transaction.paymentStatus === 'scheduled' ? (
-                            <CalendarClock className="h-4 w-4" />
-                          ) : (
-                            <Clock className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleStatusChange('paid')}
-                          className="gap-2"
-                        >
-                          <Check className="h-4 w-4 text-green-500" />
-                          <span>Marcar como pago</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleStatusChange('pending')}
-                          className="gap-2"
-                        >
-                          <Clock className="h-4 w-4 text-yellow-500" />
-                          <span>Marcar como pendente</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleStatusChange('scheduled')}
-                          className="gap-2"
-                        >
-                          <CalendarClock className="h-4 w-4 text-blue-500" />
-                          <span>Marcar como agendado</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                <div className="flex gap-2 sm:flex-col items-center self-end sm:self-center">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-full text-muted-foreground hover:text-primary"
+                    className="rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 active:scale-95 transition-all h-9 w-9 min-h-9 min-w-9"
                     onClick={() => onEdit(transaction)}
+                    aria-label="Editar transação"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-[18px] w-[18px]" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-full text-muted-foreground hover:text-destructive"
+                    className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all h-9 w-9 min-h-9 min-w-9"
                     onClick={() => onDelete(transaction.id)}
+                    aria-label="Excluir transação"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-[18px] w-[18px]" />
                   </Button>
                 </div>
               </>

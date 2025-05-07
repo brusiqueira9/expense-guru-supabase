@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="Gerencie suas finanças pessoais de forma inteligente" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Expense Guru</title>
+    <meta name="author" content="Expense Guru" />
+    <meta property="og:image" content="/src/assets/money.png" />
+    <script type="module" crossorigin src="/assets/main-D6Ns4R9j.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-DsfhzJSH.js">
+    <link rel="stylesheet" crossorigin href="/assets/main-C8pgHWPb.css">
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('ServiceWorker registrado com sucesso:', registration.scope);
+            })
+            .catch(error => {
+              console.log('Falha ao registrar ServiceWorker:', error);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import React from 'react';
 
 // Tipos de notificações
 export type NotificationType = 'success' | 'error' | 'warning' | 'info' | 'transaction' | 'goal' | 'reminder';
@@ -54,8 +55,8 @@ export function useNotifications() {
   const [notificationHistory, setNotificationHistory] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [notificationPreferences, setNotificationPreferences] = useState({
-    showTransactionReminders: true,
-    showGoalUpdates: true,
+    showTransactionReminders: false,
+    showGoalUpdates: false,
     showFinancialTips: true,
     minPriority: 'low' as PriorityLevel,
     showToasts: false
@@ -65,7 +66,9 @@ export function useNotifications() {
   const userId = user?.id;
 
   // Calcular contagem de notificações não lidas
-  const unreadCount = notificationHistory.filter(n => !n.isRead).length;
+  const unreadCount = React.useMemo(() => {
+    return notificationHistory.filter(n => !n.isRead && n.userId === userId).length;
+  }, [notificationHistory, userId]);
 
   // Carregar notificações do localStorage ao iniciar
   useEffect(() => {
@@ -84,10 +87,21 @@ export function useNotifications() {
         })));
       }
 
-      const storedPreferences = localStorage.getItem(`notification_preferences:${userId}`);
-      if (storedPreferences) {
-        setNotificationPreferences(JSON.parse(storedPreferences));
-      }
+      // Definir as preferências com os valores desejados independentemente do localStorage
+      setNotificationPreferences(prev => ({
+        ...prev,
+        showTransactionReminders: false,
+        showGoalUpdates: false,
+        showFinancialTips: true,
+      }));
+      
+      // Salvar as novas preferências no localStorage
+      localStorage.setItem(`notification_preferences:${userId}`, JSON.stringify({
+        ...notificationPreferences,
+        showTransactionReminders: false,
+        showGoalUpdates: false,
+        showFinancialTips: true,
+      }));
       
       const readNotificationIds = localStorage.getItem(`read_notifications:${userId}`);
       if (readNotificationIds) {
@@ -163,9 +177,33 @@ export function useNotifications() {
   const clearAllNotifications = () => {
     if (!userId) return;
 
-    setNotificationHistory(prev => prev.filter(n => n.userId !== userId));
+    // Limpar as notificações do estado
+    setNotificationHistory([]);
+
+    // Limpar notificações do localStorage
     localStorage.removeItem(`notifications:${userId}`);
     localStorage.removeItem(`read_notifications:${userId}`);
+    
+    // Marcar que as notificações de teste foram visualizadas, mas não devem ser criadas novamente
+    localStorage.setItem(`test_notifications_added:${userId}`, 'true');
+    
+    // Marcar que as dicas financeiras já foram mostradas hoje
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem(`last_tip_date:${userId}`, today);
+    
+    // Marcar notificações de transações como lidas
+    transactions.forEach(async transaction => {
+      if (transaction.type === 'expense' && !transaction.isnotificationread) {
+        try {
+          await supabase
+            .from('transactions')
+            .update({ isnotificationread: true })
+            .eq('id', transaction.id);
+        } catch (error) {
+          console.error('Erro ao marcar notificação de transação como lida:', error);
+        }
+      }
+    });
   };
 
   const updateNotificationPreferences = (preferences: Partial<typeof notificationPreferences>) => {
@@ -330,7 +368,11 @@ export function useNotifications() {
     // Verificar se já foram adicionadas notificações de teste
     const notificationsAdded = localStorage.getItem(`test_notifications_added:${auth.user.id}`);
     
-    if (!notificationsAdded) {
+    // Verificar se existem notificações no histórico
+    const hasExistingNotifications = notificationHistory.length > 0;
+    
+    // Só adicionar notificações de teste se não existirem notificações e nunca foram adicionadas
+    if (!notificationsAdded && !hasExistingNotifications) {
       // Adicionar um atraso para garantir que as notificações apareçam após o login
       setTimeout(() => {
         // Adicionar algumas notificações de teste
@@ -372,7 +414,7 @@ export function useNotifications() {
         }
       }, 3000);
     }
-  }, [auth?.user]);
+  }, [auth?.user, notificationHistory.length]);
 
   // Adicionar dicas financeiras periódicas
   useEffect(() => {
@@ -382,7 +424,11 @@ export function useNotifications() {
     const lastTipDate = localStorage.getItem(`last_tip_date:${auth.user.id}`);
     const today = new Date().toISOString().split('T')[0]; // Formato ISO YYYY-MM-DD
     
-    if (lastTipDate !== today) {
+    // Verificar se já existem dicas no histórico
+    const existingTips = notificationHistory.some(n => n.type === 'info');
+    
+    // Só mostrar dica se não mostrou hoje e não há dicas existentes
+    if (lastTipDate !== today && !existingTips) {
       // Array de dicas financeiras
       const financialTips = [
         {
@@ -419,9 +465,12 @@ export function useNotifications() {
           priority: 'medium',
           showToast: false
         });
+        
+        // Atualizar a data da última dica
+        localStorage.setItem(`last_tip_date:${auth.user.id}`, today);
       }, 3000);
     }
-  }, [auth?.user, notificationPreferences]);
+  }, [auth?.user, notificationPreferences.showFinancialTips, notificationHistory]);
 
   return {
     notificationHistory: notificationHistory.filter(notification => notification.userId === userId),
@@ -431,6 +480,6 @@ export function useNotifications() {
     addNotification,
     notificationPreferences,
     updateNotificationPreferences,
-    unreadCount: notificationHistory.filter(n => !n.isRead && n.userId === userId).length
+    unreadCount
   };
 }
