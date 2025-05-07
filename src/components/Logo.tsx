@@ -4,15 +4,15 @@ const Logo: React.FC = () => {
   return (
     <div className="relative flex items-center transition-all duration-300 hover:scale-105">
       <div className="relative w-20 h-20 flex items-center justify-center">
-        {/* Visual elements - estáticos */}
-        <div className="absolute w-[90%] h-[90%] border border-black/30 rounded-full dark:border-white/30"></div>
+        {/* Círculo de borda */}
+        <div className="absolute w-[90%] h-[90%] border border-black/30 rounded-full dark:border-white/60"></div>
         
-        {/* Logo image */}
-        <div className="relative z-10 w-14 h-14">
+        {/* Logo */}
+        <div className="relative z-10 w-14 h-14 flex items-center justify-center">
           <img 
             src={logoOficial} 
             alt="Expense Guru Logo" 
-            className="w-full h-full object-contain grayscale contrast-125 dark:brightness-90" 
+            className="w-full h-full object-contain [filter:none] dark:[filter:brightness(0)_invert(1)]" 
           />
         </div>
       </div>
