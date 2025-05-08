@@ -71,24 +71,26 @@ export function Register() {
       newErrors.password = 'Senha é obrigatória';
       isValid = false;
     } else {
+      const passwordErrors: string[] = [];
+      
       if (password.length < 8) {
-        newErrors.password = 'Senha deve ter pelo menos 8 caracteres';
-        isValid = false;
+        passwordErrors.push('Pelo menos 8 caracteres');
       }
       if (!/[A-Z]/.test(password)) {
-        newErrors.password = 'Senha deve conter pelo menos uma letra maiúscula';
-        isValid = false;
+        passwordErrors.push('Pelo menos uma letra maiúscula');
       }
       if (!/[a-z]/.test(password)) {
-        newErrors.password = 'Senha deve conter pelo menos uma letra minúscula';
-        isValid = false;
+        passwordErrors.push('Pelo menos uma letra minúscula');
       }
       if (!/\d/.test(password)) {
-        newErrors.password = 'Senha deve conter pelo menos um número';
-        isValid = false;
+        passwordErrors.push('Pelo menos um número');
       }
       if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-        newErrors.password = 'Senha deve conter pelo menos um caractere especial';
+        passwordErrors.push('Pelo menos um caractere especial');
+      }
+
+      if (passwordErrors.length > 0) {
+        newErrors.password = `A senha deve conter: ${passwordErrors.join(', ')}`;
         isValid = false;
       }
     }
