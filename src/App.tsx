@@ -14,7 +14,7 @@ import Wallets from "./pages/Wallets";
 import { Auth } from "./components/Auth";
 import { useAuth } from "./hooks/useAuth";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { Register } from "./pages/Register";
+import { Register } from "./components/Register";
 import TestPage from "./pages/TestPage";
 import Logout from "./pages/Logout";
 import { useNotifications } from "./hooks/useNotifications";
