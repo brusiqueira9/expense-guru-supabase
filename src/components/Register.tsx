@@ -152,6 +152,41 @@ export function Register() {
     }
   };
 
+  // Validação em tempo real da senha
+  const validatePassword = (value: string) => {
+    if (!value) {
+      setErrors(prev => ({ ...prev, password: 'Senha é obrigatória' }));
+      return;
+    }
+
+    const passwordErrors: string[] = [];
+    
+    if (value.length < 8) {
+      passwordErrors.push('Pelo menos 8 caracteres');
+    }
+    if (!/[A-Z]/.test(value)) {
+      passwordErrors.push('Pelo menos uma letra maiúscula');
+    }
+    if (!/[a-z]/.test(value)) {
+      passwordErrors.push('Pelo menos uma letra minúscula');
+    }
+    if (!/\d/.test(value)) {
+      passwordErrors.push('Pelo menos um número');
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) {
+      passwordErrors.push('Pelo menos um caractere especial');
+    }
+
+    if (passwordErrors.length > 0) {
+      setErrors(prev => ({ 
+        ...prev, 
+        password: `A senha deve conter: ${passwordErrors.join(', ')}` 
+      }));
+    } else {
+      setErrors(prev => ({ ...prev, password: undefined }));
+    }
+  };
+
   const isButtonDisabled = loading || cooldown > 0;
   const buttonText = loading 
     ? 'Criando conta...' 
@@ -284,10 +319,9 @@ export function Register() {
                     placeholder="Sua senha"
                     value={password}
                     onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (errors.password) {
-                        setErrors(prev => ({ ...prev, password: undefined }));
-                      }
+                      const newPassword = e.target.value;
+                      setPassword(newPassword);
+                      validatePassword(newPassword);
                     }}
                     className={`animate-text-focus pl-3 pr-10 backdrop-blur-sm bg-transparent transition-all duration-300 ${
                       errors.password 
