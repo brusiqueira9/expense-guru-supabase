@@ -19,6 +19,7 @@ import TestPage from "./pages/TestPage";
 import Logout from "./pages/Logout";
 import { useNotifications } from "./hooks/useNotifications";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
+import { Toaster } from './components/ui/toaster';
 
 // Install jsPDF and jspdf-autotable
 // <lov-add-dependency>jspdf@latest</lov-add-dependency>
@@ -92,6 +93,7 @@ function App() {
           </TransactionProvider>
         </ThemeProvider>
       </AuthProvider>
+      <Toaster />
     </Router>
   );
 }

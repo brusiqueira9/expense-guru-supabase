@@ -82,12 +82,12 @@ export function Auth() {
         message: 'Bem-vindo de volta!',
         type: 'success'
       });
+      navigate('/');
     } catch (error: any) {
       console.error('Erro no login:', error);
       let errorMessage = 'Ocorreu um erro ao fazer login';
       let fieldError = '';
       
-      // Tratamento de erros específicos do Supabase
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = 'Email ou senha incorretos';
         fieldError = 'password';
@@ -95,9 +95,8 @@ export function Auth() {
         errorMessage = 'Por favor, confirme seu email antes de fazer login';
         fieldError = 'email';
       } else if (error.message.includes('Too many requests')) {
-        const seconds = parseInt(error.message.match(/\d+/)?.[0] || '60');
-        setCooldown(seconds);
-        errorMessage = `Muitas tentativas de login. Por favor, aguarde ${seconds} segundos`;
+        errorMessage = 'Muitas tentativas de login. Por favor, aguarde alguns minutos';
+        setCooldown(60);
       }
 
       if (fieldError) {
