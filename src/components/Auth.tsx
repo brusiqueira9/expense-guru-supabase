@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
-import { Eye, EyeOff, ArrowRight, Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Lock, Mail, AlertCircle } from 'lucide-react';
 import LoginLogo from './LoginLogo';
 import { motion } from 'framer-motion';
 import BackgroundAnimation from './BackgroundAnimation';
@@ -16,6 +16,8 @@ export function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [shake, setShake] = useState(false);
   const navigate = useNavigate();
   const { signIn, session } = useAuth();
   const { addNotification } = useNotifications();
@@ -26,42 +28,43 @@ export function Auth() {
     }
   }, [session, navigate]);
 
+  const validateForm = () => {
+    const newErrors: { email?: string; password?: string } = {};
+    let isValid = true;
+
+    if (!email) {
+      newErrors.email = 'Email é obrigatório';
+      isValid = false;
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        newErrors.email = 'Email inválido';
+        isValid = false;
+      }
+    }
+
+    if (!password) {
+      newErrors.password = 'Senha é obrigatória';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
 
-    // Validações básicas
-    if (!email) {
-      addNotification({
-        title: 'Campo obrigatório',
-        message: 'Por favor, informe seu email',
-        type: 'error'
-      });
-      return;
-    }
-
-    if (!password) {
-      addNotification({
-        title: 'Campo obrigatório',
-        message: 'Por favor, informe sua senha',
-        type: 'error'
-      });
-      return;
-    }
-
-    // Validação de formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      addNotification({
-        title: 'Email inválido',
-        message: 'Por favor, informe um email válido',
-        type: 'error'
-      });
+    if (!validateForm()) {
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
       return;
     }
 
     try {
       setLoading(true);
+      setErrors({});
       await signIn(email, password);
       addNotification({
         title: 'Login realizado',
@@ -71,15 +74,25 @@ export function Auth() {
     } catch (error: any) {
       console.error('Erro no login:', error);
       let errorMessage = 'Ocorreu um erro ao fazer login';
+      let fieldError = '';
       
       // Tratamento de erros específicos do Supabase
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = 'Email ou senha incorretos';
+        fieldError = 'password';
       } else if (error.message.includes('Email not confirmed')) {
         errorMessage = 'Por favor, confirme seu email antes de fazer login';
+        fieldError = 'email';
       } else if (error.message.includes('Too many requests')) {
         errorMessage = 'Muitas tentativas de login. Por favor, aguarde alguns minutos';
       }
+
+      if (fieldError) {
+        setErrors(prev => ({ ...prev, [fieldError]: errorMessage }));
+      }
+
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
 
       addNotification({
         title: 'Erro no login',
@@ -95,7 +108,11 @@ export function Auth() {
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden">
       <BackgroundAnimation />
       
-      <div className="relative w-full max-w-md animate-float z-10">
+      <motion.div 
+        className="relative w-full max-w-md animate-float z-10"
+        animate={shake ? { x: [-10, 10, -10, 10, 0] } : {}}
+        transition={{ duration: 0.5 }}
+      >
         <Card className="neomorphic p-8">
           <div className="flex flex-col items-center justify-center mb-6">
             <LoginLogo />
@@ -123,13 +140,36 @@ export function Auth() {
                     type="email"
                     placeholder="seu@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="animate-text-focus pl-3 pr-3 backdrop-blur-sm bg-transparent border-gray-400 focus:border-black transition-all duration-300"
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) {
+                        setErrors(prev => ({ ...prev, email: undefined }));
+                      }
+                    }}
+                    className={`animate-text-focus pl-3 pr-3 backdrop-blur-sm bg-transparent transition-all duration-300 ${
+                      errors.email 
+                        ? 'border-red-500 focus:border-red-500' 
+                        : 'border-gray-400 focus:border-black'
+                    }`}
                     required
                     onFocus={() => setIsInputFocused('email')}
                     onBlur={() => setIsInputFocused(null)}
                   />
-                  <div className={`absolute bottom-0 left-0 h-0.5 bg-black transition-all duration-300 ease-in-out ${isInputFocused === 'email' ? 'w-full' : 'w-0'}`}></div>
+                  {errors.email && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+                      <AlertCircle className="h-4 w-4" />
+                    </div>
+                  )}
+                  <div className={`absolute bottom-0 left-0 h-0.5 transition-all duration-300 ease-in-out ${
+                    errors.email 
+                      ? 'bg-red-500 w-full' 
+                      : isInputFocused === 'email' 
+                        ? 'bg-black w-full' 
+                        : 'bg-black w-0'
+                  }`}></div>
+                  {errors.email && (
+                    <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                  )}
                 </div>
               </div>
 
@@ -144,8 +184,17 @@ export function Auth() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Sua senha"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="animate-text-focus pl-3 pr-10 backdrop-blur-sm bg-transparent border-gray-400 focus:border-black transition-all duration-300"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) {
+                        setErrors(prev => ({ ...prev, password: undefined }));
+                      }
+                    }}
+                    className={`animate-text-focus pl-3 pr-10 backdrop-blur-sm bg-transparent transition-all duration-300 ${
+                      errors.password 
+                        ? 'border-red-500 focus:border-red-500' 
+                        : 'border-gray-400 focus:border-black'
+                    }`}
                     required
                     onFocus={() => setIsInputFocused('password')}
                     onBlur={() => setIsInputFocused(null)}
@@ -161,7 +210,21 @@ export function Auth() {
                       <Eye className="h-4 w-4" />
                     )}
                   </button>
-                  <div className={`absolute bottom-0 left-0 h-0.5 bg-black transition-all duration-300 ease-in-out ${isInputFocused === 'password' ? 'w-full' : 'w-0'}`}></div>
+                  {errors.password && (
+                    <div className="absolute right-10 top-1/2 -translate-y-1/2 text-red-500">
+                      <AlertCircle className="h-4 w-4" />
+                    </div>
+                  )}
+                  <div className={`absolute bottom-0 left-0 h-0.5 transition-all duration-300 ease-in-out ${
+                    errors.password 
+                      ? 'bg-red-500 w-full' 
+                      : isInputFocused === 'password' 
+                        ? 'bg-black w-full' 
+                        : 'bg-black w-0'
+                  }`}></div>
+                  {errors.password && (
+                    <p className="text-sm text-red-500 mt-1">{errors.password}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -187,7 +250,7 @@ export function Auth() {
             </div>
           </form>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 } 
