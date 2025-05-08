@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Transaction, TransactionType, TransactionCategory, PaymentStatus, RecurrenceType } from "@/types";
+import { Transaction, TransactionType, TransactionCategory, PaymentStatus, RecurrenceType, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,12 @@ interface TransactionCardProps {
 }
 
 interface Category {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+}
+
+interface CombinedCategory {
   id: string;
   name: string;
   type: 'income' | 'expense';
@@ -120,7 +126,24 @@ export function TransactionCard({
     }
   };
 
-  const filteredCategories = categories.filter(cat => cat.type === transaction.type);
+  // Combinar categorias personalizadas com as padrão
+  const allCategories = React.useMemo(() => {
+    const defaultCategories: CombinedCategory[] = transaction.type === 'income' 
+      ? INCOME_CATEGORIES.map(cat => ({ id: cat, name: cat, type: 'income' as const }))
+      : EXPENSE_CATEGORIES.map(cat => ({ id: cat, name: cat, type: 'expense' as const }));
+    
+    const customCategories = categories.filter(cat => cat.type === transaction.type);
+    
+    // Remover duplicatas (caso uma categoria personalizada tenha o mesmo nome de uma padrão)
+    const uniqueCategories = [...defaultCategories];
+    customCategories.forEach(customCat => {
+      if (!uniqueCategories.some(defCat => defCat.name === customCat.name)) {
+        uniqueCategories.push(customCat);
+      }
+    });
+    
+    return uniqueCategories.sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories, transaction.type]);
 
   return (
     <Card
@@ -168,7 +191,7 @@ export function TransactionCard({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredCategories.map((cat) => (
+                    {allCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.name} className="text-sm">
                         {cat.name}
                       </SelectItem>

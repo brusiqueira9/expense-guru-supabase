@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTransactions } from '@/context/TransactionContext';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Transaction, TransactionType, TransactionCategory, PaymentStatus, RecurrenceType } from '@/types';
+import { Transaction, TransactionType, TransactionCategory, PaymentStatus, RecurrenceType, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +28,12 @@ interface FormErrors {
 }
 
 interface Category {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+}
+
+interface CombinedCategory {
   id: string;
   name: string;
   type: 'income' | 'expense';
@@ -155,7 +161,24 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
     });
   };
 
-  const filteredCategories = categories.filter(cat => cat.type === type);
+  // Combinar categorias personalizadas com as padrão
+  const allCategories = React.useMemo(() => {
+    const defaultCategories: CombinedCategory[] = type === 'income' 
+      ? INCOME_CATEGORIES.map(cat => ({ id: cat, name: cat, type: 'income' as const }))
+      : EXPENSE_CATEGORIES.map(cat => ({ id: cat, name: cat, type: 'expense' as const }));
+    
+    const customCategories = categories.filter(cat => cat.type === type);
+    
+    // Remover duplicatas (caso uma categoria personalizada tenha o mesmo nome de uma padrão)
+    const uniqueCategories = [...defaultCategories];
+    customCategories.forEach(customCat => {
+      if (!uniqueCategories.some(defCat => defCat.name === customCat.name)) {
+        uniqueCategories.push(customCat);
+      }
+    });
+    
+    return uniqueCategories.sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories, type]);
 
   return (
     <motion.form 
@@ -243,7 +266,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
               <SelectValue placeholder="Selecione uma categoria" />
             </SelectTrigger>
             <SelectContent>
-              {filteredCategories.map((cat) => (
+              {allCategories.map((cat) => (
                 <SelectItem key={cat.id} value={cat.name}>
                   {cat.name}
                 </SelectItem>
