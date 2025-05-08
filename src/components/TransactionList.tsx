@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarRange, X, AlertCircle } from "lucide-react";
-import { Transaction, TransactionFilters, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/types";
+import { Transaction, TransactionFilters, INCOME_CATEGORIES, EXPENSE_CATEGORIES, TransactionType, TransactionCategory } from "@/types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TransactionCard } from "@/components/TransactionCard";
 import { Button } from "@/components/ui/button";
 import { formatDateWithWeekday } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 
 interface TransactionListProps {
   filter?: Partial<TransactionFilters> & {
@@ -107,10 +108,8 @@ export function TransactionList({
       category: transaction.category,
       date: transaction.date,
       description: transaction.description,
-      paymentStatus: transaction.paymentStatus,
       dueDate: transaction.dueDate,
-      recurrence: transaction.recurrence,
-      recurrenceEndDate: transaction.recurrenceEndDate,
+      recurrence: transaction.recurrence
     });
   };
   
@@ -119,11 +118,30 @@ export function TransactionList({
     
     setLoading(true);
     try {
-      await updateTransaction(id, editForm as Omit<Transaction, "id">);
+      if (!editForm.type || !editForm.category) {
+        toast.error('Tipo e categoria são obrigatórios');
+        return;
+      }
+
+      const updatedTransaction = {
+        type: editForm.type,
+        amount: editForm.amount || 0,
+        category: editForm.category,
+        date: editForm.date || new Date().toISOString().split('T')[0],
+        description: editForm.description || '',
+        dueDate: editForm.dueDate,
+        recurrence: editForm.recurrence,
+        paymentStatus: editForm.paymentStatus
+      };
+      
+      await updateTransaction(id, updatedTransaction);
       setEditingId(null);
       setEditForm({});
+      updateFilters(filters);
+      toast.success('Transação atualizada com sucesso!');
     } catch (err) {
       console.error("Erro ao atualizar transação:", err);
+      toast.error('Erro ao atualizar transação');
     } finally {
       setLoading(false);
     }
@@ -132,6 +150,15 @@ export function TransactionList({
   const handleCancel = () => {
     setEditingId(null);
     setEditForm({});
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTransaction(id);
+      updateFilters(filters);
+    } catch (error) {
+      toast.error('Erro ao remover transação');
+    }
   };
 
   const hasActiveFilters = Object.values(filters).some(value => value !== undefined);
@@ -246,13 +273,12 @@ export function TransactionList({
                         transaction={transaction}
                         index={index}
                         onEdit={handleEdit}
-                        onDelete={deleteTransaction}
+                        onDelete={handleDelete}
                         editingId={editingId}
                         editForm={editForm}
                         setEditForm={setEditForm}
                         onSave={handleSave}
                         onCancel={handleCancel}
-                        categories={transaction.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES}
                       />
                     ))
                   }

@@ -1,18 +1,19 @@
-import React, { useState } from "react";
-import { useTransactions } from "@/context/TransactionContext";
-import { Transaction, TransactionType, TransactionCategory, INCOME_CATEGORIES, EXPENSE_CATEGORIES, PaymentStatus, RecurrenceType } from "@/types";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowDownCircle, ArrowUpCircle, Calendar, CalendarClock, RefreshCw } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { useNotifications } from "@/hooks/useNotifications";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
+import React, { useState, useEffect } from 'react';
+import { useTransactions } from '@/context/TransactionContext';
+import { useNotifications } from '@/hooks/useNotifications';
+import { Transaction, TransactionType, TransactionCategory, PaymentStatus, RecurrenceType } from '@/types';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TransactionFormProps {
   onSubmit?: () => void;
@@ -26,9 +27,16 @@ interface FormErrors {
   dueDate?: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+}
+
 export function TransactionForm({ onSubmit, initialData }: TransactionFormProps) {
   const { addTransaction } = useTransactions();
   const { addNotification } = useNotifications();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<TransactionType>(initialData?.type || 'expense');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
@@ -41,6 +49,33 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(initialData?.recurrence || 'monthly');
   const [errors, setErrors] = useState<FormErrors>({});
   const [shake, setShake] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchCategories();
+    }
+  }, [user?.id]);
+
+  async function fetchCategories() {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error);
+      addNotification({
+        title: 'Erro',
+        message: 'Não foi possível carregar suas categorias',
+        type: 'error'
+      });
+    }
+  }
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -119,6 +154,8 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
       return newErrors;
     });
   };
+
+  const filteredCategories = categories.filter(cat => cat.type === type);
 
   return (
     <motion.form 
@@ -206,9 +243,9 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
               <SelectValue placeholder="Selecione uma categoria" />
             </SelectTrigger>
             <SelectContent>
-              {(type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
+              {filteredCategories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.name}>
+                  {cat.name}
                 </SelectItem>
               ))}
             </SelectContent>
