@@ -18,6 +18,7 @@ export function Auth() {
   const [isInputFocused, setIsInputFocused] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [shake, setShake] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const navigate = useNavigate();
   const { signIn, session } = useAuth();
   const { addNotification } = useNotifications();
@@ -27,6 +28,16 @@ export function Auth() {
       navigate('/', { replace: true });
     }
   }, [session, navigate]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -54,7 +65,7 @@ export function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || cooldown > 0) return;
 
     if (!validateForm()) {
       setShake(true);
@@ -84,7 +95,9 @@ export function Auth() {
         errorMessage = 'Por favor, confirme seu email antes de fazer login';
         fieldError = 'email';
       } else if (error.message.includes('Too many requests')) {
-        errorMessage = 'Muitas tentativas de login. Por favor, aguarde alguns minutos';
+        const seconds = parseInt(error.message.match(/\d+/)?.[0] || '60');
+        setCooldown(seconds);
+        errorMessage = `Muitas tentativas de login. Por favor, aguarde ${seconds} segundos`;
       }
 
       if (fieldError) {
@@ -103,6 +116,13 @@ export function Auth() {
       setLoading(false);
     }
   };
+
+  const isButtonDisabled = loading || cooldown > 0;
+  const buttonText = loading 
+    ? 'Entrando...' 
+    : cooldown > 0 
+    ? `Aguarde ${cooldown}s` 
+    : 'Entrar';
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden">
@@ -232,10 +252,11 @@ export function Auth() {
             <LoadingButton
               type="submit"
               loading={loading}
-              loadingText="Entrando..."
-              className="w-full bg-black text-white hover:bg-gray-800 transition-all duration-300 group relative overflow-hidden"
+              loadingText={buttonText}
+              disabled={isButtonDisabled}
+              className="w-full bg-black text-white hover:bg-gray-800 transition-all duration-300 group relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Entrar
+              {buttonText}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </LoadingButton>
 
