@@ -318,40 +318,99 @@ export function TransactionCard({
           </motion.form>
         ) : (
           <div className="flex items-start justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium truncate">
-                    {transaction.description || currentCategory.name}
+            <div className="flex items-start gap-3 min-w-0">
+              <motion.div 
+                className={cn(
+                  "p-2 rounded-full",
+                  transaction.type === 'expense' ? 'bg-red-100' : 'bg-green-100'
+                )}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {transaction.type === 'expense' ? (
+                  <ArrowDownCircle className={cn(
+                    "h-5 w-5",
+                    transaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
+                  )} />
+                ) : (
+                  <ArrowUpCircle className="h-5 w-5 text-green-500" />
+                )}
+              </motion.div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium truncate">
+                      {transaction.description || currentCategory.name}
+                    </p>
+                    {transaction.recurrence && (
+                      <Badge variant="outline" className="text-xs">
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        {transaction.recurrence}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className={cn(
+                    "font-semibold",
+                    transaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
+                  )}>
+                    {formatCurrency(transaction.amount)}
                   </p>
-                  {transaction.recurrence && (
-                    <Badge variant="outline" className="text-xs">
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      {transaction.recurrence}
-                    </Badge>
+                </div>
+                
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-sm text-muted-foreground">
+                    {formatDate(transaction.date)}
+                  </p>
+                  {transaction.type === 'expense' && transaction.dueDate && (
+                    <p className="text-sm text-muted-foreground">
+                      • Vence em {formatDate(transaction.dueDate)}
+                    </p>
                   )}
                 </div>
-                <p className={cn(
-                  "font-semibold",
-                  transaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
-                )}>
-                  {formatCurrency(transaction.amount)}
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-sm text-muted-foreground">
-                  {formatDate(transaction.date)}
-                </p>
-                {transaction.type === 'expense' && transaction.dueDate && (
-                  <p className="text-sm text-muted-foreground">
-                    • Vence em {formatDate(transaction.dueDate)}
-                  </p>
-                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 ml-4">
+            <div className="flex items-center gap-1">
+              {transaction.type === 'expense' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-8 w-8",
+                        transaction.paymentStatus === 'paid' && "text-green-500",
+                        transaction.paymentStatus === 'pending' && "text-yellow-500",
+                        transaction.paymentStatus === 'scheduled' && "text-blue-500"
+                      )}
+                    >
+                      {transaction.paymentStatus === 'paid' ? (
+                        <Check className="h-4 w-4" />
+                      ) : transaction.paymentStatus === 'pending' ? (
+                        <Clock className="h-4 w-4" />
+                      ) : (
+                        <CalendarClock className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleStatusChange('paid')}>
+                      <Check className="h-4 w-4 mr-2" />
+                      Pago
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange('pending')}>
+                      <Clock className="h-4 w-4 mr-2" />
+                      Pendente
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange('scheduled')}>
+                      <CalendarClock className="h-4 w-4 mr-2" />
+                      Agendado
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -360,12 +419,12 @@ export function TransactionCard({
               >
                 <Edit2 className="h-4 w-4" />
               </Button>
+
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleDelete}
+                onClick={() => onDelete(transaction.id)}
                 className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                disabled={isDeleting}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
