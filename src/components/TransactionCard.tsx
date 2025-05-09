@@ -357,24 +357,20 @@ export function TransactionCard({
             <div className="flex items-start gap-2 sm:gap-3 min-w-0">
               <motion.div 
                 className={cn(
-                  "p-2 rounded-full flex flex-col items-center justify-center min-w-[56px] min-h-[56px] sm:min-w-[48px] sm:min-h-[48px]",
-                  transaction.type === 'expense' ? 'bg-red-100' : 'bg-green-100',
-                  "flex-shrink-0"
+                  "p-2 rounded-full flex-shrink-0 flex items-center justify-center min-w-[56px] min-h-[56px] sm:min-w-[48px] sm:min-h-[48px]",
+                  transaction.type === 'expense' ? 'bg-red-100' : 'bg-green-100'
                 )}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
               >
                 {transaction.type === 'expense' ? (
                   <ArrowDownCircle className={cn(
-                    "h-5 w-5 mb-1",
+                    "h-5 w-5",
                     transaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
                   )} />
                 ) : (
-                  <ArrowUpCircle className="h-5 w-5 mb-1 text-green-500" />
+                  <ArrowUpCircle className="h-5 w-5 text-green-500" />
                 )}
-                <span className="text-[10px] sm:text-xs text-center text-black/80 font-semibold leading-tight truncate max-w-[48px]">
-                  {getCategoryName()}
-                </span>
               </motion.div>
 
               <div className="min-w-0 flex-1">
