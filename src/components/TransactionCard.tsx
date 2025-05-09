@@ -15,7 +15,9 @@ import {
   RefreshCw,
   Pencil,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Calendar,
+  Edit2
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -145,6 +147,15 @@ export function TransactionCard({
     return uniqueCategories.sort((a, b) => a.name.localeCompare(b.name));
   }, [categories, transaction.type]);
 
+  // Encontrar a categoria atual
+  const currentCategory = React.useMemo(() => {
+    return allCategories.find(cat => cat.name === transaction.category) || {
+      id: transaction.category,
+      name: transaction.category,
+      type: transaction.type
+    };
+  }, [allCategories, transaction.category, transaction.type]);
+
   return (
     <Card
       className={cn(
@@ -204,25 +215,31 @@ export function TransactionCard({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="date" className="text-sm">Data</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={editForm.date || transaction.date}
-                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                  className="w-full py-2"
-                />
+                <div className="relative">
+                  <Input
+                    id="date"
+                    type="date"
+                    value={editForm.date || transaction.date}
+                    onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                    className="w-full py-2"
+                  />
+                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
               </div>
 
               {transaction.type === 'expense' && (
                 <div className="space-y-2">
                   <Label htmlFor="dueDate" className="text-sm">Data de Vencimento</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={editForm.dueDate || transaction.dueDate || ''}
-                    onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
-                    className="w-full py-2"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={editForm.dueDate || transaction.dueDate}
+                      onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                      className="w-full py-2"
+                    />
+                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  </div>
                 </div>
               )}
             </div>
@@ -231,11 +248,52 @@ export function TransactionCard({
               <Label htmlFor="description" className="text-sm">Descrição</Label>
               <Input
                 id="description"
-                value={editForm.description || transaction.description || ''}
+                value={editForm.description || transaction.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Adicione uma descrição (opcional)"
                 className="w-full py-2"
               />
             </div>
+
+            {transaction.type === 'expense' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="paymentStatus" className="text-sm">Status do Pagamento</Label>
+                  <Select
+                    value={editForm.paymentStatus || transaction.paymentStatus}
+                    onValueChange={(value) => setEditForm({ ...editForm, paymentStatus: value as PaymentStatus })}
+                  >
+                    <SelectTrigger className="py-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="paid">Pago</SelectItem>
+                      <SelectItem value="scheduled">Agendado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence" className="text-sm">Recorrência</Label>
+                  <Select
+                    value={editForm.recurrence || transaction.recurrence}
+                    onValueChange={(value) => setEditForm({ ...editForm, recurrence: value as RecurrenceType })}
+                  >
+                    <SelectTrigger className="py-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      <SelectItem value="daily">Diária</SelectItem>
+                      <SelectItem value="weekly">Semanal</SelectItem>
+                      <SelectItem value="monthly">Mensal</SelectItem>
+                      <SelectItem value="yearly">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2">
               <Button
@@ -243,128 +301,70 @@ export function TransactionCard({
                 variant="outline"
                 size="sm"
                 onClick={onCancel}
-                className="h-8 hover:bg-gray-100"
+                className="flex items-center gap-2"
               >
+                <XIcon className="h-4 w-4" />
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 size="sm"
-                className="h-8 bg-black text-white hover:bg-gray-800"
+                className="flex items-center gap-2 bg-black text-white hover:bg-gray-800"
               >
+                <Check className="h-4 w-4" />
                 Salvar
               </Button>
             </div>
           </motion.form>
         ) : (
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-3 min-w-0">
-              <motion.div 
-                className={cn(
-                  "p-2 rounded-full",
-                  transaction.type === 'expense' ? 'bg-red-100' : 'bg-green-100'
-                )}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {transaction.type === 'expense' ? (
-                  <ArrowDownCircle className={cn(
-                    "h-5 w-5",
-                    transaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
-                  )} />
-                ) : (
-                  <ArrowUpCircle className="h-5 w-5 text-green-500" />
-                )}
-              </motion.div>
-              
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">
-                      {transaction.description || transaction.category}
-                    </p>
-                    {transaction.recurrence && (
-                      <Badge variant="outline" className="text-xs">
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                        {transaction.recurrence}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className={cn(
-                    "font-semibold",
-                    transaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
-                  )}>
-                    {formatCurrency(transaction.amount)}
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium truncate">
+                    {transaction.description || currentCategory.name}
                   </p>
-                </div>
-                
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(transaction.date)}
-                  </p>
-                  {transaction.type === 'expense' && transaction.dueDate && (
-                    <p className="text-sm text-muted-foreground">
-                      • Vence em {formatDate(transaction.dueDate)}
-                    </p>
+                  {transaction.recurrence && (
+                    <Badge variant="outline" className="text-xs">
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      {transaction.recurrence}
+                    </Badge>
                   )}
                 </div>
+                <p className={cn(
+                  "font-semibold",
+                  transaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
+                )}>
+                  {formatCurrency(transaction.amount)}
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-sm text-muted-foreground">
+                  {formatDate(transaction.date)}
+                </p>
+                {transaction.type === 'expense' && transaction.dueDate && (
+                  <p className="text-sm text-muted-foreground">
+                    • Vence em {formatDate(transaction.dueDate)}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
-              {transaction.type === 'expense' && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "h-8 w-8",
-                        transaction.paymentStatus === 'paid' && "text-green-500",
-                        transaction.paymentStatus === 'pending' && "text-yellow-500",
-                        transaction.paymentStatus === 'scheduled' && "text-blue-500"
-                      )}
-                    >
-                      {transaction.paymentStatus === 'paid' ? (
-                        <Check className="h-4 w-4" />
-                      ) : transaction.paymentStatus === 'pending' ? (
-                        <Clock className="h-4 w-4" />
-                      ) : (
-                        <CalendarClock className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleStatusChange('paid')}>
-                      <Check className="h-4 w-4 mr-2" />
-                      Pago
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange('pending')}>
-                      <Clock className="h-4 w-4 mr-2" />
-                      Pendente
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange('scheduled')}>
-                      <CalendarClock className="h-4 w-4 mr-2" />
-                      Agendado
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
+            <div className="flex items-center gap-2 ml-4">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => onEdit(transaction)}
                 className="h-8 w-8"
               >
-                <Pencil className="h-4 w-4" />
+                <Edit2 className="h-4 w-4" />
               </Button>
-
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleDelete}
-                className="h-8 w-8 text-red-500 hover:text-red-600"
+                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                 disabled={isDeleting}
               >
                 <Trash2 className="h-4 w-4" />
