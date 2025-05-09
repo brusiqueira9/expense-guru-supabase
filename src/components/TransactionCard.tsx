@@ -213,15 +213,8 @@ export function TransactionCard({
               <div className="space-y-2">
                 <Label htmlFor="category" className="text-sm">Categoria</Label>
                 <Select
-                  value={editForm.category_id || transaction.category_id}
-                  onValueChange={(value) => {
-                    const selectedCategory = allCategories.find(cat => cat.id === value);
-                    setEditForm({ 
-                      ...editForm, 
-                      category_id: value,
-                      category_name: selectedCategory?.name || ''
-                    });
-                  }}
+                  value={editForm.category || transaction.category}
+                  onValueChange={(value) => setEditForm({ ...editForm, category: value as TransactionCategory })}
                 >
                   <SelectTrigger className="py-2">
                     <SelectValue />
@@ -365,9 +358,7 @@ export function TransactionCard({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">
-                      {transaction.description || currentCategory.name}
-                    </p>
+                    <p className="font-medium truncate">{transaction.description}</p>
                     {transaction.recurrence && (
                       <Badge variant="outline" className="text-xs">
                         <RefreshCw className="h-3 w-3 mr-1" />
