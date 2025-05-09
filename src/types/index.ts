@@ -22,7 +22,8 @@ export interface Transaction {
   id: string;
   type: TransactionType;
   amount: number;
-  category: TransactionCategory;
+  category_id: string;
+  category_name: string;
   date: string;
   description?: string;
   paymentStatus?: PaymentStatus;

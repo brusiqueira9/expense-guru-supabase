@@ -310,7 +310,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     }
     
     if (filters.category && filters.category !== "all") {
-      filtered = filtered.filter(t => t.category === filters.category);
+      filtered = filtered.filter(t => t.category_name === filters.category);
     }
     
     if (filters.startDate) {

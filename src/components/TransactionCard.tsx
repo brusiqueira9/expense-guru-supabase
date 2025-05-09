@@ -139,35 +139,35 @@ export function TransactionCard({
   // Encontrar a categoria atual
   const currentCategory = React.useMemo(() => {
     // Primeiro procura nas categorias personalizadas
-    const customCategory = categories.find(cat => cat.name === transaction.category);
+    const customCategory = categories.find(cat => cat.id === transaction.category_id);
     if (customCategory) {
       return customCategory;
     }
 
     // Se não encontrar nas personalizadas, procura nas padrão
-    if (transaction.type === 'income' && INCOME_CATEGORIES.includes(transaction.category as any)) {
+    if (transaction.type === 'income' && INCOME_CATEGORIES.includes(transaction.category_name as any)) {
       return {
-        id: transaction.category,
-        name: transaction.category,
+        id: transaction.category_id,
+        name: transaction.category_name,
         type: 'income' as const
       };
     }
     
-    if (transaction.type === 'expense' && EXPENSE_CATEGORIES.includes(transaction.category as any)) {
+    if (transaction.type === 'expense' && EXPENSE_CATEGORIES.includes(transaction.category_name as any)) {
       return {
-        id: transaction.category,
-        name: transaction.category,
+        id: transaction.category_id,
+        name: transaction.category_name,
         type: 'expense' as const
       };
     }
 
     // Se não encontrar em nenhum lugar, retorna a categoria da transação
     return {
-      id: transaction.category,
-      name: transaction.category,
+      id: transaction.category_id,
+      name: transaction.category_name,
       type: transaction.type
     };
-  }, [categories, transaction.category, transaction.type]);
+  }, [categories, transaction.category_id, transaction.category_name, transaction.type]);
 
   // Combinar categorias personalizadas com as padrão
   const allCategories = React.useMemo(() => {
@@ -227,15 +227,22 @@ export function TransactionCard({
               <div className="space-y-2">
                 <Label htmlFor="category" className="text-sm">Categoria</Label>
                 <Select
-                  value={editForm.category || transaction.category}
-                  onValueChange={(value) => setEditForm({ ...editForm, category: value as TransactionCategory })}
+                  value={editForm.category_id || transaction.category_id}
+                  onValueChange={(value) => {
+                    const selectedCategory = allCategories.find(cat => cat.id === value);
+                    setEditForm({ 
+                      ...editForm, 
+                      category_id: value,
+                      category_name: selectedCategory?.name || ''
+                    });
+                  }}
                 >
                   <SelectTrigger className="py-2">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {allCategories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.name} className="text-sm">
+                      <SelectItem key={cat.id} value={cat.id} className="text-sm">
                         {cat.name}
                       </SelectItem>
                     ))}
