@@ -256,6 +256,8 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
             value={categoryId}
             onValueChange={(value) => {
               setCategoryId(value);
+              const selected = allCategories.find(cat => cat.id === value);
+              setCategoryName(selected ? selected.name : value);
               clearError('category');
             }}
           >
