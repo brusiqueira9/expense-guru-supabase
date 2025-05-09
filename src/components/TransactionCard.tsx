@@ -382,8 +382,10 @@ export function TransactionCard({
                   <div className="flex items-center gap-2">
                     <p className="font-medium truncate text-base sm:text-lg">
                       {transaction.description}
-                      <span className="block text-xs text-muted-foreground font-normal sm:inline sm:ml-2">{getCategoryName()}</span>
                     </p>
+                    <Badge variant="secondary" className="text-xs font-normal px-2 py-0.5">
+                      {getCategoryName()}
+                    </Badge>
                     {transaction.recurrence && (
                       <Badge variant="outline" className="text-xs">
                         <RefreshCw className="h-3 w-3 mr-1" />
