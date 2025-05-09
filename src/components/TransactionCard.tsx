@@ -128,12 +128,16 @@ export function TransactionCard({
     }
   };
 
+  // Função para parsear data local corretamente
+  function parseLocalDate(dateString: string) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   // Função para formatar a data no fuso horário correto
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    // Ajusta para o fuso horário local
-    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    const date = parseLocalDate(dateString);
+    return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
   // Encontrar a categoria atual (compatível com todos os formatos)
