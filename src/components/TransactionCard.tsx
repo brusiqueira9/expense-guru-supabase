@@ -140,6 +140,19 @@ export function TransactionCard({
     return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
+  // Função para obter o nome da categoria (personalizada ou padrão)
+  const getCategoryName = React.useCallback(() => {
+    // 1. Procurar nas categorias personalizadas do banco
+    const custom = categories.find(cat => cat.name === transaction.category);
+    if (custom) return custom.name;
+    // 2. Procurar nas categorias padrão
+    if (INCOME_CATEGORIES.includes(transaction.category as any) || EXPENSE_CATEGORIES.includes(transaction.category as any)) {
+      return transaction.category;
+    }
+    // 3. Fallback
+    return 'Sem categoria';
+  }, [categories, transaction.category]);
+
   // Encontrar a categoria atual (compatível com todos os formatos)
   const currentCategory = React.useMemo(() => {
     // 1. Categoria personalizada pelo ID
@@ -366,6 +379,7 @@ export function TransactionCard({
                   <div className="flex items-center gap-2">
                     <p className="font-medium truncate text-base sm:text-lg">
                       {transaction.description}
+                      <span className="block text-xs text-muted-foreground font-normal sm:inline sm:ml-2">{getCategoryName()}</span>
                     </p>
                     {transaction.recurrence && (
                       <Badge variant="outline" className="text-xs">
