@@ -131,8 +131,43 @@ export function TransactionCard({
   // Função para formatar a data no fuso horário correto
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    // Ajusta para o fuso horário local
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
+
+  // Encontrar a categoria atual
+  const currentCategory = React.useMemo(() => {
+    // Primeiro procura nas categorias personalizadas
+    const customCategory = categories.find(cat => cat.name === transaction.category);
+    if (customCategory) {
+      return customCategory;
+    }
+
+    // Se não encontrar nas personalizadas, procura nas padrão
+    if (transaction.type === 'income' && INCOME_CATEGORIES.includes(transaction.category as any)) {
+      return {
+        id: transaction.category,
+        name: transaction.category,
+        type: 'income' as const
+      };
+    }
+    
+    if (transaction.type === 'expense' && EXPENSE_CATEGORIES.includes(transaction.category as any)) {
+      return {
+        id: transaction.category,
+        name: transaction.category,
+        type: 'expense' as const
+      };
+    }
+
+    // Se não encontrar em nenhum lugar, retorna a categoria da transação
+    return {
+      id: transaction.category,
+      name: transaction.category,
+      type: transaction.type
+    };
+  }, [categories, transaction.category, transaction.type]);
 
   // Combinar categorias personalizadas com as padrão
   const allCategories = React.useMemo(() => {
@@ -152,39 +187,6 @@ export function TransactionCard({
     
     return uniqueCategories.sort((a, b) => a.name.localeCompare(b.name));
   }, [categories, transaction.type]);
-
-  // Encontrar a categoria atual
-  const currentCategory = React.useMemo(() => {
-    // Se a categoria da transação for uma das categorias padrão
-    if (transaction.type === 'income' && INCOME_CATEGORIES.includes(transaction.category as any)) {
-      return {
-        id: transaction.category,
-        name: transaction.category,
-        type: 'income' as const
-      };
-    }
-    
-    if (transaction.type === 'expense' && EXPENSE_CATEGORIES.includes(transaction.category as any)) {
-      return {
-        id: transaction.category,
-        name: transaction.category,
-        type: 'expense' as const
-      };
-    }
-
-    // Se não for uma categoria padrão, procura nas personalizadas
-    const customCategory = categories.find(cat => cat.name === transaction.category);
-    if (customCategory) {
-      return customCategory;
-    }
-
-    // Se não encontrar em nenhum lugar, retorna a categoria da transação
-    return {
-      id: transaction.category,
-      name: transaction.category,
-      type: transaction.type
-    };
-  }, [categories, transaction.category, transaction.type]);
 
   return (
     <Card
