@@ -136,22 +136,23 @@ export function TransactionCard({
     return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
-  // Encontrar a categoria atual (compatível com dados antigos)
+  // Encontrar a categoria atual (compatível com todos os formatos)
   const currentCategory = React.useMemo(() => {
-    // 1. Tenta encontrar categoria personalizada pelo ID
+    // 1. Categoria personalizada pelo ID
     const customCategory = categories.find(cat => cat.id === transaction.category_id);
     if (customCategory) return customCategory;
 
-    // 2. Tenta encontrar categoria padrão pelo nome
-    if (INCOME_CATEGORIES.includes(transaction.category_name as any) || INCOME_CATEGORIES.includes(transaction.category_id as any)) {
-      return { id: transaction.category_id, name: transaction.category_name || transaction.category_id, type: 'income' as const };
+    // 2. Categoria padrão pelo nome (tenta todos os campos possíveis)
+    const nome = transaction.category_name || transaction.category_id || (transaction as any).category;
+    if (INCOME_CATEGORIES.includes(nome as any)) {
+      return { id: nome, name: nome, type: 'income' as const };
     }
-    if (EXPENSE_CATEGORIES.includes(transaction.category_name as any) || EXPENSE_CATEGORIES.includes(transaction.category_id as any)) {
-      return { id: transaction.category_id, name: transaction.category_name || transaction.category_id, type: 'expense' as const };
+    if (EXPENSE_CATEGORIES.includes(nome as any)) {
+      return { id: nome, name: nome, type: 'expense' as const };
     }
 
     // 3. Fallback: mostra o que tiver
-    return { id: transaction.category_id, name: transaction.category_name || transaction.category_id || 'Sem categoria', type: transaction.type };
+    return { id: nome, name: nome || 'Sem categoria', type: transaction.type };
   }, [categories, transaction]);
 
   // Combinar categorias personalizadas com as padrão
