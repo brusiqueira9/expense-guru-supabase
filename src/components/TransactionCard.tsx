@@ -149,12 +149,30 @@ export function TransactionCard({
 
   // Encontrar a categoria atual
   const currentCategory = React.useMemo(() => {
-    return allCategories.find(cat => cat.name === transaction.category) || {
+    // Primeiro tenta encontrar nas categorias personalizadas
+    const customCategory = categories.find(cat => cat.name === transaction.category);
+    if (customCategory) return customCategory;
+
+    // Se não encontrar, procura nas categorias padrão
+    const defaultCategory = transaction.type === 'income'
+      ? INCOME_CATEGORIES.find(cat => cat === transaction.category)
+      : EXPENSE_CATEGORIES.find(cat => cat === transaction.category);
+
+    if (defaultCategory) {
+      return {
+        id: defaultCategory,
+        name: defaultCategory,
+        type: transaction.type
+      };
+    }
+
+    // Se não encontrar em nenhum lugar, retorna a categoria da transação
+    return {
       id: transaction.category,
       name: transaction.category,
       type: transaction.type
     };
-  }, [allCategories, transaction.category, transaction.type]);
+  }, [categories, transaction.category, transaction.type]);
 
   return (
     <Card
