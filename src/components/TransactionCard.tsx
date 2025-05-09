@@ -183,12 +183,13 @@ export function TransactionCard({
       className={cn(
         "transition-all duration-300",
         isHovered && "shadow-lg",
-        editingId === transaction.id && "ring-2 ring-black"
+        editingId === transaction.id && "ring-2 ring-black",
+        "p-2 sm:p-4",
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-0">
         {editingId === transaction.id ? (
           <motion.form
             initial={{ opacity: 0 }}
@@ -339,12 +340,13 @@ export function TransactionCard({
             </div>
           </motion.form>
         ) : (
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
+            <div className="flex items-start gap-2 sm:gap-3 min-w-0">
               <motion.div 
                 className={cn(
                   "p-2 rounded-full",
-                  transaction.type === 'expense' ? 'bg-red-100' : 'bg-green-100'
+                  transaction.type === 'expense' ? 'bg-red-100' : 'bg-green-100',
+                  "flex-shrink-0"
                 )}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
@@ -360,9 +362,11 @@ export function TransactionCard({
               </motion.div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">{transaction.description}</p>
+                    <p className="font-medium truncate text-base sm:text-lg">
+                      {transaction.description}
+                    </p>
                     {transaction.recurrence && (
                       <Badge variant="outline" className="text-xs">
                         <RefreshCw className="h-3 w-3 mr-1" />
@@ -371,19 +375,18 @@ export function TransactionCard({
                     )}
                   </div>
                   <p className={cn(
-                    "font-semibold",
+                    "font-semibold text-sm sm:text-base",
                     transaction.type === 'expense' ? 'text-red-500' : 'text-green-500'
                   )}>
                     {formatCurrency(transaction.amount)}
                   </p>
                 </div>
-                
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {formatDate(transaction.date)}
                   </p>
                   {transaction.type === 'expense' && transaction.dueDate && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       • Vence em {formatDate(transaction.dueDate)}
                     </p>
                   )}
@@ -391,7 +394,7 @@ export function TransactionCard({
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 mt-2 sm:mt-0">
               {transaction.type === 'expense' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
