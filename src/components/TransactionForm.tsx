@@ -46,8 +46,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<TransactionType>(initialData?.type || 'expense');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
-  const [categoryId, setCategoryId] = useState<string>(initialData?.category_id || '');
-  const [categoryName, setCategoryName] = useState<string>(initialData?.category_name || '');
+  const [category, setCategory] = useState<TransactionCategory | ''>(initialData?.category || '');
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState(initialData?.description || '');
   const [dueDate, setDueDate] = useState(initialData?.dueDate || '');
@@ -93,7 +92,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
       isValid = false;
     }
 
-    if (!categoryId) {
+    if (!category) {
       newErrors.category = 'Categoria é obrigatória';
       isValid = false;
     }
@@ -127,8 +126,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
       const transaction = {
         type,
         amount: parseFloat(amount),
-        category_id: categoryId,
-        category_name: categoryName,
+        category: category as TransactionCategory,
         date,
         description,
         dueDate: type === 'expense' ? dueDate : undefined,
@@ -253,11 +251,9 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
         <div className="space-y-2">
           <Label htmlFor="category">Categoria</Label>
           <Select
-            value={categoryId}
+            value={category}
             onValueChange={(value) => {
-              setCategoryId(value);
-              const selected = allCategories.find(cat => cat.id === value);
-              setCategoryName(selected ? selected.name : value);
+              setCategory(value as TransactionCategory);
               clearError('category');
             }}
           >
@@ -271,7 +267,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
             </SelectTrigger>
             <SelectContent>
               {allCategories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
+                <SelectItem key={cat.name} value={cat.name}>
                   {cat.name}
                 </SelectItem>
               ))}
