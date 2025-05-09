@@ -128,6 +128,12 @@ export function TransactionCard({
     }
   };
 
+  // Função para formatar a data no fuso horário correto
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
   // Combinar categorias personalizadas com as padrão
   const allCategories = React.useMemo(() => {
     const defaultCategories: CombinedCategory[] = transaction.type === 'income' 
@@ -149,21 +155,27 @@ export function TransactionCard({
 
   // Encontrar a categoria atual
   const currentCategory = React.useMemo(() => {
-    // Primeiro tenta encontrar nas categorias personalizadas
-    const customCategory = categories.find(cat => cat.name === transaction.category);
-    if (customCategory) return customCategory;
-
-    // Se não encontrar, procura nas categorias padrão
-    const defaultCategory = transaction.type === 'income'
-      ? INCOME_CATEGORIES.find(cat => cat === transaction.category)
-      : EXPENSE_CATEGORIES.find(cat => cat === transaction.category);
-
-    if (defaultCategory) {
+    // Se a categoria da transação for uma das categorias padrão
+    if (transaction.type === 'income' && INCOME_CATEGORIES.includes(transaction.category as any)) {
       return {
-        id: defaultCategory,
-        name: defaultCategory,
-        type: transaction.type
+        id: transaction.category,
+        name: transaction.category,
+        type: 'income' as const
       };
+    }
+    
+    if (transaction.type === 'expense' && EXPENSE_CATEGORIES.includes(transaction.category as any)) {
+      return {
+        id: transaction.category,
+        name: transaction.category,
+        type: 'expense' as const
+      };
+    }
+
+    // Se não for uma categoria padrão, procura nas personalizadas
+    const customCategory = categories.find(cat => cat.name === transaction.category);
+    if (customCategory) {
+      return customCategory;
     }
 
     // Se não encontrar em nenhum lugar, retorna a categoria da transação
